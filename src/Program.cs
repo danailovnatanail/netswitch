@@ -17,7 +17,14 @@ namespace NetSwitch
                 return;
             }
 
-            bool background = Array.IndexOf(args, "--background") >= 0;
+            if (args.Length >= 2 && args[0] == "--make-icon")
+            {
+                // genera app.ico (usato da build.ps1 come icona dell'eseguibile)
+                AppIcon.WriteIco(args[1]);
+                return;
+            }
+
+            bool background =Array.IndexOf(args, "--background") >= 0;
             bool created;
             // in debug l'istanza di prova è separata da quella normale
             string inst = DebugOn ? "_debug" : "";

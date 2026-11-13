@@ -21,7 +21,10 @@ if ($NoElevation) {
 
 $wpf = Join-Path (Split-Path $csc) 'WPF'
 $src = Get-ChildItem (Join-Path $root 'src') -Filter *.cs | ForEach-Object { $_.FullName }
-& $csc /nologo /target:winexe /optimize+ /codepage:65001 /platform:anycpu "/out:$OutFile" "/win32manifest:$manifest" "/lib:$wpf" `
+# icona dell'eseguibile (rigenerabile con: NetSwitch.exe --make-icon app.ico)
+$ico = Join-Path $root 'app.ico'
+$icoArg = @(); if (Test-Path $ico) { $icoArg = @("/win32icon:$ico") }
+& $csc /nologo /target:winexe /optimize+ /codepage:65001 /platform:anycpu "/out:$OutFile" "/win32manifest:$manifest" "/lib:$wpf" @icoArg `
     /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.Management.dll /r:System.Xml.dll `
     /r:PresentationFramework.dll /r:PresentationCore.dll /r:WindowsBase.dll /r:System.Xaml.dll `
     $src

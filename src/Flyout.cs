@@ -101,12 +101,9 @@ namespace NetSwitch
             DockPanel.SetDock(refresh, Dock.Right);
             header.Children.Add(more);
             header.Children.Add(refresh);
-            var logo = new Border();
-            logo.Width = 26; logo.Height = 26;
-            logo.CornerRadius = new CornerRadius(6);
-            logo.Margin = new Thickness(0, 0, 10, 0);
-            logo.SetResourceReference(Border.BackgroundProperty, "Accent");
-            logo.Child = UI.Icon(UI.Glyph.Ethernet, 14, "AccentFg");
+            var logo = UI.Logo(28);
+            logo.Margin = new Thickness(-1, 0, 9, 0);
+            logo.VerticalAlignment = VerticalAlignment.Center;
             header.Children.Add(logo);
             var title = UI.Text("NetSwitch", 14, "Fg", FontWeights.SemiBold);
             title.VerticalAlignment = VerticalAlignment.Center;

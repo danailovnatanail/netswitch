@@ -57,6 +57,33 @@ namespace NetSwitch
             return Text(text, size, fgKey, FontWeights.Normal);
         }
 
+        /// <summary>Logo dell'app (stesso disegno di AppIcon): tre nodi collegati su fondo sfumato.</summary>
+        public static FrameworkElement Logo(double size)
+        {
+            var c = new Canvas { Width = 32, Height = 32 };
+            var bg = new Rectangle { Width = 30, Height = 30, RadiusX = 9, RadiusY = 9 };
+            bg.Fill = new LinearGradientBrush(Color.FromRgb(0x2D, 0xD4, 0xBF), Color.FromRgb(0x02, 0x84, 0xC7), new Point(0, 0), new Point(1, 1));
+            Canvas.SetLeft(bg, 1); Canvas.SetTop(bg, 1);
+            c.Children.Add(bg);
+            var links = new Path
+            {
+                Data = Geometry.Parse("M16,10.5 C16,16 9.5,15.5 9.5,21.5 M16,10.5 C16,16 22.5,15.5 22.5,21.5"),
+                Stroke = Brushes.White, StrokeThickness = 2.6, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round
+            };
+            c.Children.Add(links);
+            Action<double, double, double, Brush> dot = (x, y, r, b) =>
+            {
+                var e = new Ellipse { Width = r * 2, Height = r * 2, Fill = b };
+                Canvas.SetLeft(e, x - r); Canvas.SetTop(e, y - r);
+                c.Children.Add(e);
+            };
+            dot(16, 10, 4.2, Brushes.White);
+            dot(16, 10, 1.7, new SolidColorBrush(Color.FromRgb(0x0E, 0xA5, 0xE9)));
+            dot(9.5, 22, 3.3, Brushes.White);
+            dot(22.5, 22, 3.3, Brushes.White);
+            return new Viewbox { Width = size, Height = size, Child = c };
+        }
+
         public static TextBlock Icon(string glyph, double size, string fgKey)
         {
             var t = new TextBlock();
