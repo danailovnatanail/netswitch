@@ -34,31 +34,3 @@ Non serve installare nulla (usa il compilatore C# e WPF inclusi in Windows):
     powershell -ExecutionPolicy Bypass -File build.ps1
 
 Diagnostica: con `NETSWITCH_DEBUG=1` viene scritto `%TEMP%\netswitch_debug.log`.
-
-## Sito web (GitHub Pages)
-Il sito di presentazione si trova in `docs/` (pagina unica `index.html`, screenshot in `docs/img/`,
-eseguibile scaricabile in `docs/download/NetSwitch.exe`). I font (Inter e JetBrains Mono, licenza
-SIL OFL 1.1) sono in `docs/fonts/`: il sito non usa cookie né contatta server esterni.
-
-Per pubblicarlo: **Settings → Pages → Build and deployment → Source: Deploy from a branch**,
-branch `main`, cartella `/docs`. Il link alla repository viene ricavato automaticamente
-dall'indirizzo `utente.github.io/repo`; con un dominio personalizzato imposta la costante `REPO`
-nello script in fondo a `index.html`.
-
-Dopo una nuova versione aggiorna l'eseguibile del sito:
-
-    powershell -ExecutionPolicy Bypass -File build.ps1 -OutFile docs\download\NetSwitch.exe
-
-Gli screenshot usano interfacce e configurazioni fittizie (nessun dato reale del PC). Per
-rigenerarli, con una build di prova (`-NoElevation`):
-
-    $env:NETSWITCH_DEBUG='1'; $env:NETSWITCH_FAKE='1'; $env:NETSWITCH_NOHIDE='1'
-    $env:NETSWITCH_THEME='dark'          # oppure light
-    $env:NETSWITCH_DEMO='expand'         # vuoto, expand, editor, configs
-    $env:NETSWITCH_SNAP='docs\img\expand-dark.png'
-    .\NetSwitch.exe
-
-## Esclusione di responsabilità
-NetSwitch è fornito "così com'è", senza garanzie di alcun tipo. Modifica la configurazione di rete
-del computer: lo usi a tuo rischio. Lo sviluppatore non è responsabile di danni, perdite di dati o
-interruzioni di connettività derivanti dal suo utilizzo.
