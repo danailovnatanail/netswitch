@@ -107,7 +107,7 @@ body {
   overflow-x: hidden;
 }
 a { color: inherit; }
-img { max-width: 100%; display: block; }
+img { max-width: 100%; height: auto; display: block; }
 code, .mono { font-family: var(--mono); }
 .wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -139,6 +139,9 @@ code, .mono { font-family: var(--mono); }
   transition: border-color .2s, background-color .2s;
 }
 .icon-btn:hover { border-color: var(--accent); }
+/* .nav-links a aggiunge padding e colore: sul pulsante icona va annullato */
+.nav-links a.icon-btn { padding: 0; color: var(--text); }
+.nav-links a.icon-btn:hover { background: var(--surface); }
 .icon-btn svg { width: 18px; height: 18px; }
 .theme-btn .sun { display: none; }
 :root[data-theme="dark"] .theme-btn .sun { display: block; }
