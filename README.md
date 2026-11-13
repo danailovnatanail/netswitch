@@ -34,3 +34,8 @@ Non serve installare nulla (usa il compilatore C# e WPF inclusi in Windows):
     powershell -ExecutionPolicy Bypass -File build.ps1
 
 Diagnostica: con `NETSWITCH_DEBUG=1` viene scritto `%TEMP%\netswitch_debug.log`.
+
+## Esclusione di responsabilità
+NetSwitch è fornito "così com'è", senza garanzie di alcun tipo. Modifica la configurazione di rete
+del computer: lo usi a tuo rischio. Lo sviluppatore non è responsabile di danni, perdite di dati o
+interruzioni di connettività derivanti dal suo utilizzo.
