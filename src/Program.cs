@@ -50,6 +50,14 @@ namespace NetSwitch
                     {
                         controller.ShowFlyout();
                         if (DebugOn) controller.Demo(Environment.GetEnvironmentVariable("NETSWITCH_DEMO"));
+                        // NETSWITCH_SNAP=file.png: salva un'immagine del pannello ed esce
+                        string snap = DebugOn ? Environment.GetEnvironmentVariable("NETSWITCH_SNAP") : null;
+                        if (!string.IsNullOrEmpty(snap))
+                        {
+                            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1800) };
+                            t.Tick += (s, e) => { t.Stop(); controller.Snap(snap); controller.ExitApp(); };
+                            t.Start();
+                        }
                     }));
                 app.Run();
                 GC.KeepAlive(mutex);
@@ -59,6 +67,8 @@ namespace NetSwitch
         /// <summary>Solo per diagnostica: impostare la variabile d'ambiente NETSWITCH_DEBUG=1.</summary>
         public static readonly bool DebugOn = Environment.GetEnvironmentVariable("NETSWITCH_DEBUG") == "1";
         public static readonly bool NoAutoHide = Environment.GetEnvironmentVariable("NETSWITCH_NOHIDE") == "1";
+        /// <summary>Interfacce e configurazioni fittizie (screenshot della documentazione).</summary>
+        public static readonly bool Fake = DebugOn && Environment.GetEnvironmentVariable("NETSWITCH_FAKE") == "1";
 
         public static void Debug(string s)
         {

@@ -15,8 +15,12 @@ namespace NetSwitch
         public static void Apply(Application app)
         {
             IsDark = ReadIsDark();
+            // diagnostica: tema forzato e accento fisso per gli screenshot della documentazione
+            string forced = Program.DebugOn ? Environment.GetEnvironmentVariable("NETSWITCH_THEME") : null;
+            if (forced == "dark" || forced == "light") IsDark = forced == "dark";
             var r = app.Resources;
             Color accent = ReadAccent(IsDark);
+            if (Program.Fake) accent = IsDark ? Color.FromRgb(0x2D, 0xD4, 0xBF) : Color.FromRgb(0x0D, 0x94, 0x88);
 
             if (IsDark)
             {

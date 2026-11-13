@@ -56,6 +56,7 @@ namespace NetSwitch
 
         public static List<SavedConfig> Load()
         {
+            if (Program.Fake) return DemoData.Configs();
             try
             {
                 if (!File.Exists(FilePath)) return new List<SavedConfig>();
@@ -73,6 +74,7 @@ namespace NetSwitch
 
         public static void Save(List<SavedConfig> list)
         {
+            if (Program.Fake) return; // i dati fittizi non vanno mai salvati
             Directory.CreateDirectory(Folder);
             var ser = new XmlSerializer(typeof(List<SavedConfig>));
             string tmp = FilePath + ".tmp";

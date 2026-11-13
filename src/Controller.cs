@@ -359,6 +359,8 @@ namespace NetSwitch
             else if (mode == "error") flyout.ShowResult(false, "Imposta IP su Ethernet non riuscita.\n\nL'oggetto esiste già.");
         }
 
+        public void Snap(string path) { flyout.SnapTo(path); }
+
         // ================================================================== uscita
 
         public void ExitApp()

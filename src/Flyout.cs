@@ -211,7 +211,7 @@ namespace NetSwitch
             Content = container;
 
             autoRefresh = new DispatcherTimer();
-            autoRefresh.Interval = TimeSpan.FromSeconds(5);
+            autoRefresh.Interval = Program.Fake ? TimeSpan.FromDays(1) : TimeSpan.FromSeconds(5);
             autoRefresh.Tick += (s, e) => { if (!app.Busy) { var t = app.RefreshAsync(); } };
 
             Deactivated += (s, e) => HideFlyout();
@@ -302,6 +302,22 @@ namespace NetSwitch
         {
             if (!exiting) { e.Cancel = true; HideFlyout(); }
             base.OnClosing(e);
+        }
+
+        /// <summary>Solo diagnostica: salva il pannello (con ombra e trasparenza) come PNG a doppia risoluzione.</summary>
+        public void SnapTo(string path)
+        {
+            var fe = (FrameworkElement)Content;
+            const double scale = 2;
+            var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                // il contenitore ha un margine (spazio per l'ombra) che RenderTargetBitmap mantiene
+                (int)Math.Ceiling((fe.ActualWidth + fe.Margin.Left + fe.Margin.Right) * scale),
+                (int)Math.Ceiling((fe.ActualHeight + fe.Margin.Top + fe.Margin.Bottom) * scale),
+                96 * scale, 96 * scale, PixelFormats.Pbgra32);
+            rtb.Render(fe);
+            var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+            enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+            using (var fs = System.IO.File.Create(path)) enc.Save(fs);
         }
 
         public void ForceClose()

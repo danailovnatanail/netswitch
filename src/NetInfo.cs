@@ -83,6 +83,7 @@ namespace NetSwitch
     {
         public static List<AdapterInfo> GetAdapters()
         {
+            if (Program.Fake) return DemoData.Adapters();
             var nics = new Dictionary<string, NetworkInterface>(StringComparer.OrdinalIgnoreCase);
             try
             {
