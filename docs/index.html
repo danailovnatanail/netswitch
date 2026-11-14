@@ -6,6 +6,12 @@
 <title>NetSwitch — Le tue reti, a portata di clic</title>
 <meta name="description" content="NetSwitch: pannello compatto per Windows 10/11 che cambia IP, DHCP, gateway e DNS e attiva o disattiva le interfacce di rete con un clic dalla barra delle applicazioni.">
 <meta name="color-scheme" content="light dark">
+<link rel="canonical" href="https://netswit.ch/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://netswit.ch/">
+<meta property="og:site_name" content="NetSwitch">
+<meta property="og:title" content="NetSwitch — Le tue reti, a portata di clic">
+<meta property="og:description" content="Pannello compatto per Windows 10/11: cambia IP, DHCP, gateway e DNS e attiva o disattiva le interfacce di rete con un clic dalla tray.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <!-- font ospitati localmente (nessuna richiesta a server esterni); licenze in fonts/ -->
 <link rel="preload" href="fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
@@ -605,21 +611,6 @@ footer svg { width: 18px; height: 18px; }
 <script>
 (function () {
   'use strict';
-
-  /* ---------------------------------------------------------------- link alla repository
-     Se il sito è pubblicato su GitHub Pages (utente.github.io/repo) il link viene ricavato
-     dall'indirizzo. Per un dominio personalizzato, scrivi qui "utente/repo". */
-  var REPO = 'danailovnatanail/netswitch';
-  if (!REPO && /\.github\.io$/i.test(location.hostname)) {
-    var user = location.hostname.split('.')[0];
-    var first = location.pathname.split('/').filter(Boolean)[0];
-    REPO = user + '/' + (first && first.indexOf('.') < 0 ? first : location.hostname);
-  }
-  if (REPO) {
-    var url = 'https://github.com/' + REPO;
-    document.querySelectorAll('.js-repo').forEach(function (a) { a.href = url; });
-    document.querySelectorAll('.js-repo-label').forEach(function (s) { s.textContent = 'github.com/' + REPO; });
-  }
 
   /* ---------------------------------------------------------------- tema */
   var root = document.documentElement;
