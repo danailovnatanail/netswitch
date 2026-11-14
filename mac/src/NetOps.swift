@@ -169,8 +169,9 @@ enum NetOps {
 
     static func apply(_ serviceName: String, _ deviceName: String, _ c: SavedConfig) -> OpResult {
         if c.dhcp { return applyDhcp(serviceName) }
-        guard let addrs = tryParseCidrList(c.address).list else {
-            return OpResult(false, tryParseCidrList(c.address).error ?? "Indirizzo non valido.")
+        let (parsedAddrs, parseErr) = tryParseCidrList(c.address)
+        guard let addrs = parsedAddrs else {
+            return OpResult(false, parseErr ?? "Indirizzo non valido.")
         }
         var dns: [String] = []
         if !c.dns1.trimmingCharacters(in: .whitespaces).isEmpty { dns.append(c.dns1.trimmingCharacters(in: .whitespaces)) }

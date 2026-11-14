@@ -124,23 +124,20 @@ enum NetInfo {
         for rawLine in r.message.components(separatedBy: "\n") {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             if line.isEmpty { continue }
-            if line.hasPrefix("(") , let closeParen = line.firstIndex(of: ")") {
-                let afterParen = line[line.index(after: closeParen)...].trimmingCharacters(in: .whitespaces)
-                if afterParen.hasPrefix("Hardware Port:") {
-                    // riga di dettaglio: "(Hardware Port: Wi-Fi, Device: en0)"
-                    let inner = line.replacingOccurrences(of: "(", with: "").replacingOccurrences(of: ")", with: "")
-                    var hw = "", dev = ""
-                    for part in inner.components(separatedBy: ",") {
-                        let kv = part.trimmingCharacters(in: .whitespaces)
-                        if kv.hasPrefix("Hardware Port:") { hw = kv.replacingOccurrences(of: "Hardware Port:", with: "").trimmingCharacters(in: .whitespaces) }
-                        else if kv.hasPrefix("Device:") { dev = kv.replacingOccurrences(of: "Device:", with: "").trimmingCharacters(in: .whitespaces) }
-                    }
-                    if let svc = pendingService { result.append((svc, hw, dev)) }
-                    pendingService = nil
-                } else {
-                    // riga "(1) Wi-Fi"
-                    pendingService = afterParen
+            if line.hasPrefix("(Hardware Port:") {
+                // riga di dettaglio: "(Hardware Port: Wi-Fi, Device: en0)"
+                let inner = line.replacingOccurrences(of: "(", with: "").replacingOccurrences(of: ")", with: "")
+                var hw = "", dev = ""
+                for part in inner.components(separatedBy: ",") {
+                    let kv = part.trimmingCharacters(in: .whitespaces)
+                    if kv.hasPrefix("Hardware Port:") { hw = kv.replacingOccurrences(of: "Hardware Port:", with: "").trimmingCharacters(in: .whitespaces) }
+                    else if kv.hasPrefix("Device:") { dev = kv.replacingOccurrences(of: "Device:", with: "").trimmingCharacters(in: .whitespaces) }
                 }
+                if let svc = pendingService { result.append((svc, hw, dev)) }
+                pendingService = nil
+            } else if line.hasPrefix("("), let closeParen = line.firstIndex(of: ")") {
+                // riga "(1) Wi-Fi"
+                pendingService = line[line.index(after: closeParen)...].trimmingCharacters(in: .whitespaces)
             }
         }
         return result
@@ -169,7 +166,7 @@ enum NetInfo {
 
     private static func fillFromGetInfo(_ a: AdapterInfo) {
         let r = NetOps.runProcess(NetOps.networksetup, ["-getinfo", a.name])
-        var lines = r.message.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+        let lines = r.message.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
         if lines.isEmpty { return }
         let head = lines.first ?? ""
         a.dhcp = head.hasPrefix("DHCP") || head.hasPrefix("BootP")
@@ -186,7 +183,6 @@ enum NetInfo {
             }
         }
         if let router = router, !router.isEmpty, router != "none" { a.gateways.append(router) }
-        lines.removeAll()
 
         let d = NetOps.runProcess(NetOps.networksetup, ["-getdnsservers", a.name])
         if !d.message.lowercased().contains("there aren't any dns servers") {

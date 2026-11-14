@@ -193,7 +193,7 @@ class ClosureMenuItem: NSMenuItem {
         super.init(title: title, action: action == nil ? nil : #selector(fire), keyEquivalent: "")
         self.target = self
     }
-    required init(coder: NSCoder) { fatalError() }
+    required init?(coder: NSCoder) { fatalError() }
     @objc private func fire() { handler?() }
 }
 
@@ -302,9 +302,10 @@ class StyledTextField: NSTextField {
         return r
     }
 
-    override func textDidEndEditing(_ notification: Notification) {
-        super.textDidEndEditing(notification)
-        isFocused = false
+    override func resignFirstResponder() -> Bool {
+        let r = super.resignFirstResponder()
+        if r { isFocused = false }
+        return r
     }
 
     override func draw(_ dirtyRect: NSRect) {

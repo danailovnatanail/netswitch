@@ -439,7 +439,8 @@ class ConfigCardView: NSView {
         let actions = NSStackView(views: [applyBtn, NSView(), editBtn, dupBtn, upBtn, downBtn, delBtn])
         actions.orientation = .horizontal
         actions.spacing = 4
-        actions.setHuggingPriority(.defaultLow, for: .horizontal)
+        actions.translatesAutoresizingMaskIntoConstraints = false
+        actions.widthAnchor.constraint(equalToConstant: 356).isActive = true
         details.addArrangedSubview(actions)
 
         root.addArrangedSubview(details)
