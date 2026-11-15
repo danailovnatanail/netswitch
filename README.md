@@ -3,6 +3,9 @@
 Pannello compatto in stile Windows 11 per gestire le interfacce di rete, ancorato alla barra
 delle applicazioni vicino all'orologio.
 
+Disponibile anche per **macOS** (Apple Silicon), nella barra dei menu: vedi
+[mac/README.md](mac/README.md). Sito e download: [netswit.ch](https://netswit.ch).
+
 ## Uso
 Esegui `NetSwitch.exe` (richiede privilegi di amministratore: compare il prompt UAC).
 

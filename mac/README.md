@@ -55,6 +55,15 @@ Produce `NetSwitch.app` nella cartella corrente, compilato per arm64 (Apple Sili
 ad-hoc (senza certificato Apple Developer: al primo avvio macOS potrebbe chiedere conferma in
 Preferenze di Sistema → Privacy e Sicurezza → "Apri comunque").
 
+Con `./build.sh -d` viene creato anche `NetSwitch-macOS.dmg` (l'app e un collegamento ad
+Applicazioni): è il file pubblicato sul sito.
+
+## Installazione
+Apri il DMG e trascina NetSwitch in Applicazioni: l'app è autonoma, non installa nulla e non
+ha dipendenze. Poiché non è firmata con un certificato Developer ID né notarizzata da Apple,
+al **primo** avvio macOS la blocca: apri Impostazioni di Sistema → Privacy e sicurezza e
+scegli "Apri comunque". Dai lanci successivi parte normalmente.
+
 Diagnostica: con `NETSWITCH_DEBUG=1` viene scritto `$TMPDIR/netswitch_debug.log` (stessa
 convenzione della versione Windows: `NETSWITCH_FAKE=1`, `NETSWITCH_DEMO=...`,
 `NETSWITCH_SNAP=file.png`, `NETSWITCH_THEME=dark|light`, `NETSWITCH_NOHIDE=1`).

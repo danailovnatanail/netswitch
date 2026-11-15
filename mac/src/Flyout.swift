@@ -619,32 +619,71 @@ class Flyout: NSWindow, NSMenuDelegate {
     func warn(_ text: String) { setSnack(UI.Glyph.warning, Theme.warning, text, autoHide: 5, closable: true, spin: false) }
 
     private func buildSnack() {
+        // stesso layout di Flyout.cs: margine 12, padding 12/9/6/9, icona e ✕ allineate alla
+        // prima riga, testo che occupa tutta la larghezza, ombra per staccarlo dalla lista
         snack.wantsLayer = true
         snack.layer?.cornerRadius = 6
         snack.layer?.borderWidth = 1
         snack.layer?.backgroundColor = Theme.menuBg.cgColor
         snack.layer?.borderColor = Theme.cardBorder.cgColor
+        snack.layer?.masksToBounds = false
+        snack.layer?.shadowColor = NSColor.black.cgColor
+        snack.layer?.shadowOpacity = Theme.isDark ? 0.45 : 0.18
+        snack.layer?.shadowRadius = 6
+        snack.layer?.shadowOffset = NSSize(width: 0, height: -2)
         snack.isHidden = true
         snack.translatesAutoresizingMaskIntoConstraints = false
         layers.addSubview(snack)
+
+        snackCloseBtn = UI.iconButton(UI.Glyph.close, "Chiudi", { [weak self] in self?.hideSnack() })
+        for v in [snackIcon, snackText, snackCloseBtn!] as [NSView] {
+            v.translatesAutoresizingMaskIntoConstraints = false
+            snack.addSubview(v)
+        }
+        snackText.maximumNumberOfLines = 8
+        snackText.preferredMaxLayoutWidth = Flyout.panelWidth - 24 - 12 - 16 - 10 - 6 - 24 - 6
+        snackText.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        // il pulsante creato da iconButton è 30x30: qui più piccolo, come su Windows
+        for c in snackCloseBtn.constraints where c.firstAttribute == .width || c.firstAttribute == .height { c.constant = 24 }
         NSLayoutConstraint.activate([
             snack.leadingAnchor.constraint(equalTo: layers.leadingAnchor, constant: 12),
             snack.trailingAnchor.constraint(equalTo: layers.trailingAnchor, constant: -12),
             snack.bottomAnchor.constraint(equalTo: layers.bottomAnchor, constant: -12),
+
+            snackIcon.leadingAnchor.constraint(equalTo: snack.leadingAnchor, constant: 12),
+            snackIcon.topAnchor.constraint(equalTo: snack.topAnchor, constant: 11),
+            snackIcon.widthAnchor.constraint(equalToConstant: 16),
+            snackIcon.heightAnchor.constraint(equalToConstant: 16),
+
+            snackText.leadingAnchor.constraint(equalTo: snackIcon.trailingAnchor, constant: 10),
+            snackText.topAnchor.constraint(equalTo: snack.topAnchor, constant: 10),
+            snackText.bottomAnchor.constraint(equalTo: snack.bottomAnchor, constant: -10),
+            snackText.trailingAnchor.constraint(equalTo: snackCloseBtn.leadingAnchor, constant: -6),
+
+            snackCloseBtn.trailingAnchor.constraint(equalTo: snack.trailingAnchor, constant: -6),
+            snackCloseBtn.topAnchor.constraint(equalTo: snack.topAnchor, constant: 6),
         ])
-        snackCloseBtn = UI.iconButton(UI.Glyph.close, "Chiudi", { [weak self] in self?.hideSnack() })
-        let row = NSStackView(views: [snackIcon, snackText, snackCloseBtn])
-        row.orientation = .horizontal
-        row.alignment = .top
-        row.spacing = 10
-        row.translatesAutoresizingMaskIntoConstraints = false
-        snack.addSubview(row)
-        NSLayoutConstraint.activate([
-            row.topAnchor.constraint(equalTo: snack.topAnchor, constant: 9),
-            row.bottomAnchor.constraint(equalTo: snack.bottomAnchor, constant: -9),
-            row.leadingAnchor.constraint(equalTo: snack.leadingAnchor, constant: 12),
-            row.trailingAnchor.constraint(equalTo: snack.trailingAnchor, constant: -6),
+    }
+
+    /// Prima riga (esito) in evidenza, dettagli più tenui subito sotto, senza riga vuota.
+    private func snackAttributed(_ text: String) -> NSAttributedString {
+        let parts = text.components(separatedBy: "\n\n")
+        let head = parts[0]
+        let detail = parts.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        let r = NSMutableAttributedString(string: head, attributes: [
+            .font: NSFont.systemFont(ofSize: 12.5, weight: detail.isEmpty ? .regular : .semibold),
+            .foregroundColor: Theme.fg,
         ])
+        if !detail.isEmpty {
+            let para = NSMutableParagraphStyle()
+            para.paragraphSpacingBefore = 3
+            r.append(NSAttributedString(string: "\n" + detail, attributes: [
+                .font: NSFont.systemFont(ofSize: 12),
+                .foregroundColor: Theme.fg2,
+                .paragraphStyle: para,
+            ]))
+        }
+        return r
     }
 
     private func setSnack(_ glyph: String, _ color: NSColor, _ text: String, autoHide: TimeInterval, closable: Bool, spin: Bool) {
@@ -652,7 +691,7 @@ class Flyout: NSWindow, NSMenuDelegate {
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
         snackIcon.image = NSImage(systemSymbolName: glyph, accessibilityDescription: nil)?.withSymbolConfiguration(config)
         snackIcon.contentTintColor = color
-        snackText.stringValue = text
+        snackText.attributedStringValue = snackAttributed(text)
         snackCloseBtn.isHidden = !closable
         snackIcon.wantsLayer = true
         if spin {

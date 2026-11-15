@@ -1,15 +1,18 @@
 #!/bin/bash
 # Compila NetSwitch.app con il compilatore Swift incluso negli Strumenti da riga di comando
 # di Xcode (nessun progetto Xcode necessario), per processori Apple Silicon (arm64).
-# Uso:  ./build.sh [-o cartella_output]
+# Uso:  ./build.sh [-o cartella_output] [-d]
+#       -d  crea anche NetSwitch-macOS.dmg (app + collegamento ad Applicazioni, da trascinare)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT_DIR="$ROOT"
-while getopts "o:" opt; do
+MAKE_DMG=0
+while getopts "o:d" opt; do
   case "$opt" in
     o) OUT_DIR="$OPTARG" ;;
-    *) echo "Uso: $0 [-o cartella_output]"; exit 1 ;;
+    d) MAKE_DMG=1 ;;
+    *) echo "Uso: $0 [-o cartella_output] [-d]"; exit 1 ;;
   esac
 done
 
@@ -40,6 +43,17 @@ echo "Firma ad-hoc..."
 codesign --force --deep -s - "$APP"
 
 echo "OK -> $APP"
+
+if [ "$MAKE_DMG" = 1 ]; then
+  DMG="$OUT_DIR/NetSwitch-macOS.dmg"
+  STAGE="$(mktemp -d)"
+  cp -R "$APP" "$STAGE/"
+  ln -s /Applications "$STAGE/Applicazioni"
+  rm -f "$DMG"
+  hdiutil create -quiet -volname "NetSwitch" -srcfolder "$STAGE" -format UDZO -ov "$DMG"
+  rm -rf "$STAGE"
+  echo "OK -> $DMG"
+fi
 echo
 echo "Al primo avvio macOS potrebbe comunque chiedere conferma (Preferenze di Sistema >"
 echo "Privacy e Sicurezza > 'Apri comunque'), perché l'app non è firmata con un certificato"

@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NetSwitch — Le tue reti, a portata di clic</title>
-<meta name="description" content="NetSwitch: pannello compatto per Windows 10/11 che cambia IP, DHCP, gateway e DNS e attiva o disattiva le interfacce di rete con un clic dalla barra delle applicazioni.">
+<meta name="description" content="NetSwitch: pannello compatto per Windows 10/11 e macOS che cambia IP, DHCP, gateway e DNS e attiva o disattiva le interfacce di rete con un clic dalla barra delle applicazioni o dalla barra dei menu.">
 <meta name="color-scheme" content="light dark">
 <link rel="canonical" href="https://netswit.ch/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://netswit.ch/">
 <meta property="og:site_name" content="NetSwitch">
 <meta property="og:title" content="NetSwitch — Le tue reti, a portata di clic">
-<meta property="og:description" content="Pannello compatto per Windows 10/11: cambia IP, DHCP, gateway e DNS e attiva o disattiva le interfacce di rete con un clic dalla tray.">
+<meta property="og:description" content="Pannello compatto per Windows 10/11 e macOS: cambia IP, DHCP, gateway e DNS e attiva o disattiva le interfacce di rete con un clic.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <!-- font ospitati localmente (nessuna richiesta a server esterni); licenze in fonts/ -->
 <link rel="preload" href="fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
@@ -189,6 +189,19 @@ h1 .grad {
   background: linear-gradient(100deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
+.news {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0 0 22px;
+  padding: 5px 12px 5px 6px; border-radius: 999px; text-decoration: none;
+  font: 500 12.5px var(--mono); color: var(--text-2);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border: 1px solid var(--border); transition: border-color .2s, color .2s;
+}
+.news:hover { border-color: var(--accent); color: var(--text); }
+.news b, .tag-new {
+  font: 600 10.5px var(--mono); letter-spacing: .05em; text-transform: uppercase;
+  color: var(--accent); background: var(--accent-soft); padding: 2px 7px; border-radius: 999px;
+}
+.tag-new { margin-left: 8px; vertical-align: 1px; }
 .lead { font-size: clamp(17px, 2vw, 20px); color: var(--text-2); max-width: 560px; margin: 0 0 30px; }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .btn {
@@ -322,6 +335,9 @@ h2 { font-size: clamp(30px, 4vw, 46px); line-height: 1.1; letter-spacing: -.03em
 .dl-file svg { width: 34px; height: 34px; color: var(--accent); flex: none; }
 .dl-file b { display: block; font-size: 15px; }
 .dl-file span { color: var(--text-3); font-size: 12.5px; }
+.dl-file + .dl-file { margin-top: -14px; }
+.dl-file .btn { margin-left: auto; padding: 9px 14px; font-size: 14px; flex: none; }
+.dl-file .btn svg { width: 16px; height: 16px; color: inherit; }
 .dl-side { padding: 44px; border-left: 1px solid var(--border); background: var(--surface-2); }
 .dl-side h3 { margin: 0 0 16px; font-size: 15px; font: 600 13px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
 .checks { list-style: none; margin: 0 0 28px; padding: 0; display: grid; gap: 12px; }
@@ -371,6 +387,8 @@ footer svg { width: 18px; height: 18px; }
   .chip-1 { left: -8px; }
   .chip-2 { right: -8px; }
   .btn { width: 100%; }
+  .dl-file { flex-wrap: wrap; }
+  .dl-file .btn { margin-left: 0; }
   .hero { padding: 104px 0 72px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -409,11 +427,12 @@ footer svg { width: 18px; height: 18px; }
   <canvas id="net" aria-hidden="true"></canvas>
   <div class="wrap hero-grid">
     <div>
+      <a class="news" href="#download"><b>Nuovo</b>ora anche per macOS</a>
       <h1 id="hero-title">Le tue reti,<br><span class="grad">a portata di clic</span></h1>
       <p class="lead">
-        NetSwitch è un pannello compatto nella tray di Windows. Cambi IP, subnet, gateway e DNS,
-        passi al DHCP e attivi o disattivi le interfacce, senza aprire il Pannello di controllo
-        o scrivere comandi <code>netsh</code>.
+        NetSwitch è un pannello compatto nella tray di Windows e nella barra dei menu del Mac.
+        Cambi IP, subnet, gateway e DNS, passi al DHCP e attivi o disattivi le interfacce, senza
+        aprire le impostazioni di sistema o scrivere comandi <code>netsh</code>.
       </p>
       <div class="cta">
         <a class="btn btn-primary" href="#download">
@@ -425,7 +444,7 @@ footer svg { width: 18px; height: 18px; }
           Codice sorgente
         </a>
       </div>
-      <div class="meta"><span>nessuna installazione</span><span>open source</span><span>tema chiaro/scuro</span></div>
+      <div class="meta"><span>Windows e macOS</span><span>nessuna installazione</span><span>open source</span><span>tema chiaro/scuro</span></div>
     </div>
     <div class="hero-visual">
       <img class="shot js-shot" data-shot="main" src="img/main-light.png" width="408" height="648" alt="Pannello di NetSwitch con l'elenco delle interfacce: connesse, non connesse e disattivate">
@@ -472,13 +491,13 @@ footer svg { width: 18px; height: 18px; }
         <span class="idx">05</span>
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="15" width="20" height="6" rx="1.5"/><circle cx="18" cy="18" r="1" fill="currentColor"/><rect x="11" y="3" width="11" height="9" rx="1.5"/></svg></div>
         <h3>Vive nella tray</h3>
-        <p>Il pannello si apre accanto all'orologio, con la barra in basso o in alto, e si chiude cliccando altrove o con Esc. Può partire insieme a Windows.</p>
+        <p>Il pannello si apre accanto all'orologio, nella tray di Windows o nella barra dei menu del Mac, e si chiude cliccando altrove o con Esc. Può partire all'accesso.</p>
       </article>
       <article class="feat reveal">
         <span class="idx">06</span>
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7Z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg></div>
         <h3>Leggero e nativo</h3>
-        <p>Un eseguibile di circa 150 KB, senza installazione né dipendenze: usa .NET Framework e WPF già inclusi in Windows. Segue il tema e il colore d'accento di sistema.</p>
+        <p>Senza installazione né dipendenze: su Windows un eseguibile di circa 200 KB con .NET Framework e WPF già inclusi nel sistema, su Mac un'app nativa Swift/AppKit. Segue il tema e il colore d'accento di sistema.</p>
       </article>
     </div>
   </div>
@@ -524,7 +543,7 @@ footer svg { width: 18px; height: 18px; }
     <div class="section-head reveal">
       <div class="kicker">// prima e dopo</div>
       <h2 id="cmp-title">Niente più comandi da ricordare.</h2>
-      <p>Sotto il cofano NetSwitch usa <code>netsh</code> e WMI, esattamente come faresti a mano, ma in un clic.</p>
+      <p>Sotto il cofano NetSwitch usa <code>netsh</code> e WMI su Windows, <code>networksetup</code> su Mac: esattamente come faresti a mano, ma in un clic.</p>
     </div>
     <div class="compare">
       <div class="term reveal">
@@ -556,33 +575,40 @@ footer svg { width: 18px; height: 18px; }
       <div class="dl-main">
         <div class="kicker">// download</div>
         <h2>Pronto in pochi secondi.</h2>
-        <p style="color:var(--text-2);margin:0;font-size:17px">Scarica l'eseguibile, avvialo e conferma il prompt UAC: l'icona compare nella tray. Dal menu <b>⋯</b> puoi attivare l'avvio automatico con Windows.</p>
+        <p style="color:var(--text-2);margin:0;font-size:17px">Scarica la versione per il tuo sistema e avviala: l'icona compare nella tray di Windows (dopo il prompt UAC) o nella barra dei menu del Mac. Su Mac apri il DMG e trascina NetSwitch in Applicazioni. Dal menu <b>⋯</b> puoi attivare l'avvio automatico.</p>
         <div class="dl-file">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 14h6M9 18h4"/></svg>
-          <div><b>NetSwitch.exe</b><span>Windows x64/x86 · ~150 KB · .NET Framework 4.x</span></div>
+          <div><b>NetSwitch.exe</b><span>Windows 10/11 · x64/x86 · ~200 KB</span></div>
+          <a class="btn" href="download/NetSwitch.exe" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Windows</a>
+        </div>
+        <div class="dl-file">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+          <div><b>NetSwitch-macOS.dmg<span class="tag-new">nuovo</span></b><span>macOS 11+ · Apple Silicon · ~1,7 MB</span></div>
+          <a class="btn" href="download/NetSwitch-macOS.dmg" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Mac</a>
         </div>
         <div class="cta">
-          <a class="btn btn-primary" href="download/NetSwitch.exe" download>
+          <a class="btn btn-primary" id="dlMain" href="download/NetSwitch.exe" download>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-            Scarica l'eseguibile
+            <span id="dlMainText">Scarica per Windows</span>
           </a>
           <a class="btn js-repo" href="https://github.com/danailovnatanail/netswitch" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
             Vedi su GitHub
           </a>
         </div>
-        <p class="note">Windows SmartScreen potrebbe segnalare l'eseguibile perché non è firmato digitalmente: scegli <i>Ulteriori informazioni → Esegui comunque</i>, oppure compilalo tu dai sorgenti.</p>
+        <p class="note">Le app non sono firmate con un certificato: Windows SmartScreen può segnalare l'eseguibile (scegli <i>Ulteriori informazioni → Esegui comunque</i>); su Mac, solo al primo avvio, consentila da <i>Impostazioni di Sistema → Privacy e sicurezza → Apri comunque</i>. In alternativa compilale tu dai sorgenti.</p>
       </div>
       <div class="dl-side">
         <h3>Requisiti</h3>
         <ul class="checks">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Windows 10 o Windows 11</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>.NET Framework 4.x (già incluso in Windows)</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Privilegi di amministratore (servono per modificare la rete)</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Windows 10 o 11, oppure macOS 11 o successivo su Mac Apple Silicon</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Su Windows .NET Framework 4.x, già incluso nel sistema</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Un account amministratore (serve per modificare la rete)</li>
         </ul>
         <h3>Compila dai sorgenti</h3>
         <div class="code-line"><span class="c-p">PS&gt;</span> powershell -ExecutionPolicy Bypass -File build.ps1</div>
-        <p class="note">Usa il compilatore C# incluso in Windows: non serve installare Visual Studio.</p>
+        <div class="code-line" style="margin-top:8px"><span class="c-p">$</span> cd mac &amp;&amp; ./build.sh</div>
+        <p class="note">Su Windows basta il compilatore C# incluso nel sistema; su Mac gli Strumenti da riga di comando di Xcode.</p>
       </div>
     </div>
     <p class="disclaimer reveal" role="note">
@@ -600,7 +626,7 @@ footer svg { width: 18px; height: 18px; }
 
 <footer>
   <div class="wrap">
-    <span class="mono">NetSwitch · gestione interfacce di rete per Windows</span>
+    <span class="mono">NetSwitch · gestione interfacce di rete per Windows e macOS</span>
     <a class="js-repo" href="https://github.com/danailovnatanail/netswitch" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.39-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
       <span class="js-repo-label">github.com/danailovnatanail/netswitch</span>
@@ -655,6 +681,13 @@ footer svg { width: 18px; height: 18px; }
   ['main', 'expand', 'editor', 'configs'].forEach(function (s) {
     ['light', 'dark'].forEach(function (t) { var i = new Image(); i.src = 'img/' + s + '-' + t + '.png'; });
   });
+
+  /* ---------------------------------------------------------------- download per il sistema in uso */
+  var ua = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent;
+  if (/mac/i.test(ua) && !/iphone|ipad/i.test(navigator.userAgent)) {
+    document.getElementById('dlMain').setAttribute('href', 'download/NetSwitch-macOS.dmg');
+    document.getElementById('dlMainText').textContent = 'Scarica per Mac';
+  }
 
   /* ---------------------------------------------------------------- nav */
   var nav = document.getElementById('nav');
