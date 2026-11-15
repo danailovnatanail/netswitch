@@ -222,7 +222,8 @@ h1 .grad {
 .meta span::before { content: "▸ "; color: var(--accent); }
 
 .hero-visual { position: relative; justify-self: center; width: min(400px, 100%); }
-.hero-visual .shot { width: 100%; filter: drop-shadow(0 30px 50px rgba(0, 0, 0, .25)); animation: float 7s ease-in-out infinite; }
+.hero-visual .shot { width: 100%; filter: drop-shadow(0 30px 50px rgba(0, 0, 0, .25)); animation: float 7s ease-in-out infinite; transition: opacity .25s; }
+.hero-visual .shot.fade { opacity: 0; }
 @keyframes float { 50% { transform: translateY(-10px); } }
 .chip {
   position: absolute; display: flex; align-items: center; gap: 8px;
@@ -286,6 +287,16 @@ h2 { font-size: clamp(30px, 4vw, 46px); line-height: 1.1; letter-spacing: -.03em
 .tab .n { font: 600 12px var(--mono); color: var(--accent); }
 .tab p { margin: 6px 0 0 34px; color: var(--text-2); font-size: 15px; display: none; }
 .tab[aria-selected="true"] p { display: block; }
+.os-switch {
+  display: inline-flex; gap: 2px; margin-top: 22px; padding: 3px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.os-switch button {
+  font: 500 12.5px var(--mono); color: var(--text-3); background: none; border: 0; cursor: pointer;
+  padding: 5px 14px; border-radius: 999px; transition: color .2s, background-color .2s;
+}
+.os-switch button:hover { color: var(--text); }
+.os-switch button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
 .tour-shot { position: relative; }
 .tour-shot img { width: 100%; filter: drop-shadow(0 30px 50px rgba(0, 0, 0, .22)); transition: opacity .25s; }
 .tour-shot img.fade { opacity: 0; }
@@ -510,6 +521,10 @@ footer svg { width: 18px; height: 18px; }
       <div class="kicker">// tour</div>
       <h2>Un pannello, nessuna finestra in più.</h2>
       <p>Editor, conferme ed esiti delle operazioni compaiono dentro lo stesso pannello compatto.</p>
+      <div class="os-switch" role="group" aria-label="Sistema delle schermate">
+        <button type="button" data-os="win" aria-pressed="true">Windows</button>
+        <button type="button" data-os="mac" aria-pressed="false">macOS</button>
+      </div>
     </div>
     <div class="tour">
       <div class="tabs" role="tablist" aria-label="Schermate di NetSwitch">
@@ -645,12 +660,33 @@ footer svg { width: 18px; height: 18px; }
     var t = root.getAttribute('data-theme');
     return t === 'dark' || t === 'light' ? t : (mq.matches ? 'dark' : 'light');
   }
+  // Schermate macOS (img/mac/) su qualsiasi dispositivo Apple (Mac, iPhone, iPad: iPadOS si
+  // presenta come Mac), Windows (img/) su tutti gli altri. isMac indica un Mac vero (senza
+  // touch), l'unico su cui si può scaricare l'app per macOS.
+  var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  var isApple = /mac|iphone|ipad|ipod/i.test(platform) || /iphone|ipad|ipod|macintosh/i.test(navigator.userAgent);
+  var isMac = isApple && /mac/i.test(platform) && !/iphone|ipad|ipod/i.test(navigator.userAgent) && !(navigator.maxTouchPoints > 1);
+  var os = isApple ? 'mac' : 'win';
+  try { var savedOs = localStorage.getItem('netswitch-os'); if (savedOs === 'mac' || savedOs === 'win') os = savedOs; } catch (e) {}
+  function shotPath(shot, t, o) { return 'img/' + (o === 'mac' ? 'mac/' : '') + shot + '-' + t + '.png'; }
   function syncShots() {
     var t = currentTheme();
     document.querySelectorAll('.js-shot').forEach(function (img) {
-      img.src = 'img/' + img.getAttribute('data-shot') + '-' + t + '.png';
+      img.src = shotPath(img.getAttribute('data-shot'), t, os);
+    });
+    document.querySelectorAll('.os-switch button').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-os') === os ? 'true' : 'false');
     });
   }
+  document.querySelectorAll('.os-switch button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      os = b.getAttribute('data-os');
+      try { localStorage.setItem('netswitch-os', os); } catch (e) {}
+      var imgs = document.querySelectorAll('.js-shot');
+      imgs.forEach(function (i) { i.classList.add('fade'); });
+      setTimeout(function () { syncShots(); imgs.forEach(function (i) { i.classList.remove('fade'); }); }, 160);
+    });
+  });
   var themeBtn = document.getElementById('themeBtn');
   themeBtn.addEventListener('click', function () {
     var next = currentTheme() === 'dark' ? 'light' : 'dark';
@@ -679,12 +715,13 @@ footer svg { width: 18px; height: 18px; }
   syncShots();
   // precarica le immagini dell'altro tema per un cambio istantaneo
   ['main', 'expand', 'editor', 'configs'].forEach(function (s) {
-    ['light', 'dark'].forEach(function (t) { var i = new Image(); i.src = 'img/' + s + '-' + t + '.png'; });
+    ['light', 'dark'].forEach(function (t) {
+      ['win', 'mac'].forEach(function (o) { var i = new Image(); i.src = shotPath(s, t, o); });
+    });
   });
 
   /* ---------------------------------------------------------------- download per il sistema in uso */
-  var ua = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || navigator.userAgent;
-  if (/mac/i.test(ua) && !/iphone|ipad/i.test(navigator.userAgent)) {
+  if (isMac) {
     document.getElementById('dlMain').setAttribute('href', 'download/NetSwitch-macOS.dmg');
     document.getElementById('dlMainText').textContent = 'Scarica per Mac';
   }

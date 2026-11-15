@@ -283,6 +283,9 @@ class AdapterCardView: NSView {
         let g = NSGridView(numberOfColumns: 2, rows: 0)
         g.rowSpacing = 4
         g.columnSpacing = 8
+        // colonna delle etichette a larghezza fissa: altrimenti, se la griglia è più larga del
+        // contenuto, lo spazio in più finisce lì e i valori vengono spinti a destra
+        g.column(at: 0).width = 78
         return g
     }
 

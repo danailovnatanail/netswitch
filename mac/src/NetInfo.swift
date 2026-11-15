@@ -53,8 +53,11 @@ final class AdapterInfo {
 
     var speedText: String {
         if !isConnected || speed <= 0 { return "" }
-        if speed >= 1_000_000_000 { return String(format: "%.1f Gbps", Double(speed) / 1_000_000_000.0) }
-        return String(format: "%.1f Mbps", Double(speed) / 1_000_000.0)
+        // come ToString("0.#") in C#: al più un decimale, separatore della lingua di sistema
+        let f = NumberFormatter()
+        f.maximumFractionDigits = 1
+        if speed >= 1_000_000_000 { return (f.string(from: NSNumber(value: Double(speed) / 1_000_000_000.0)) ?? "") + " Gbps" }
+        return (f.string(from: NSNumber(value: Double(speed) / 1_000_000.0)) ?? "") + " Mbps"
     }
 }
 

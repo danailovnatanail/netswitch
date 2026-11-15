@@ -9,7 +9,7 @@ enum DemoData {
 
         let eth = AdapterInfo()
         eth.name = "Ethernet"; eth.hardwarePort = "Ethernet"; eth.device = "en5"
-        eth.mac = "00-1A-2B-3C-4D-5E"; eth.connectionStatus = 2; eth.present = true
+        eth.mac = "00:1a:2b:3c:4d:5e"; eth.connectionStatus = 2; eth.present = true
         eth.dhcp = false; eth.speed = 1_000_000_000
         eth.addresses = ["192.168.10.20/24", "10.0.0.20/24"]
         eth.gateways = ["192.168.10.1"]
@@ -18,7 +18,7 @@ enum DemoData {
 
         let wifi = AdapterInfo()
         wifi.name = "Wi-Fi"; wifi.hardwarePort = "Wi-Fi"; wifi.device = "en0"
-        wifi.mac = "A4-B1-C2-D3-E4-F5"; wifi.connectionStatus = 2; wifi.present = true
+        wifi.mac = "a4:b1:c2:d3:e4:f5"; wifi.connectionStatus = 2; wifi.present = true
         wifi.dhcp = true; wifi.speed = 866_000_000
         wifi.addresses = ["192.168.1.34/24"]
         wifi.gateways = ["192.168.1.1"]
@@ -26,15 +26,15 @@ enum DemoData {
         list.append(wifi)
 
         let usb = AdapterInfo()
-        usb.name = "Ethernet USB"; usb.hardwarePort = "Ethernet Adapter (en6)"; usb.device = "en6"
-        usb.mac = "00-E0-4C-68-01-02"; usb.connectionStatus = 7; usb.present = true
+        usb.name = "Ethernet USB"; usb.hardwarePort = "USB 10/100/1000 LAN"; usb.device = "en6"
+        usb.mac = "00:e0:4c:68:01:02"; usb.connectionStatus = 7; usb.present = true
         usb.dhcp = false
         usb.addresses = ["172.16.0.10/16"]
         list.append(usb)
 
         let bt = AdapterInfo()
         bt.name = "Bluetooth PAN"; bt.hardwarePort = "Bluetooth PAN"; bt.device = "en7"
-        bt.mac = "A4-B1-C2-D3-E4-F9"; bt.adminEnabled = false; bt.connectionStatus = 0; bt.present = true
+        bt.mac = "a4:b1:c2:d3:e4:f9"; bt.adminEnabled = false; bt.connectionStatus = 0; bt.present = true
         bt.dhcp = true
         list.append(bt)
 
