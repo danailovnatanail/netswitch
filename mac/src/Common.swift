@@ -21,15 +21,6 @@ enum Program {
         appendText(line, to: path)
     }
 
-    static func logError(_ error: Error, context: String = "") {
-        do {
-            try FileManager.default.createDirectory(atPath: ConfigStore.folder, withIntermediateDirectories: true)
-            let path = (ConfigStore.folder as NSString).appendingPathComponent("errori.log")
-            let text = "\(Date())  \(context)\n\(error)\n\n"
-            appendText(text, to: path)
-        } catch { }
-    }
-
     private static func appendText(_ text: String, to path: String) {
         guard let data = text.data(using: .utf8) else { return }
         if FileManager.default.fileExists(atPath: path) {

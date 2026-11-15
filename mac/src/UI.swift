@@ -38,6 +38,7 @@ enum UI {
         t.textColor = color
         t.lineBreakMode = .byTruncatingTail
         t.cell?.truncatesLastVisibleLine = true
+        t.maximumNumberOfLines = 1
         return t
     }
 
@@ -162,8 +163,6 @@ enum UI {
         return mi
     }
 
-    static func menuSeparator() -> NSMenuItem { .separator() }
-
     static func showMenu(_ menu: NSMenu, relativeTo view: NSView) {
         let p = NSPoint(x: 0, y: -4)
         menu.popUp(positioning: nil, at: p, in: view)
@@ -193,7 +192,7 @@ class ClosureMenuItem: NSMenuItem {
         super.init(title: title, action: action == nil ? nil : #selector(fire), keyEquivalent: "")
         self.target = self
     }
-    required init?(coder: NSCoder) { fatalError() }
+    required init(coder: NSCoder) { fatalError() }
     @objc private func fire() { handler?() }
 }
 
@@ -216,6 +215,8 @@ class StyledButton: NSButton {
             let config = NSImage.SymbolConfiguration(pointSize: symbolSize, weight: .regular)
             self.image = NSImage(systemSymbolName: image, accessibilityDescription: nil)?.withSymbolConfiguration(config)
             self.imagePosition = title.isEmpty ? .imageOnly : (imageAfter ? .imageRight : .imageLeading)
+            // icona e testo centrati insieme anche nei pulsanti larghi (come in WPF)
+            self.imageHugsTitle = true
         }
         isBordered = false
         wantsLayer = true
@@ -244,7 +245,21 @@ class StyledButton: NSButton {
 
     override var isEnabled: Bool { didSet { updateAppearance() } }
 
+    /// Padding interno del pulsante (stile 'Btn' di Theme.cs: 12,5,12,6): senza bordo NSButton
+    /// si adatta al solo testo.
+    var padding = NSEdgeInsets(top: 5, left: 12, bottom: 6, right: 12) { didSet { invalidateIntrinsicContentSize() } }
+
+    override var intrinsicContentSize: NSSize {
+        let s = super.intrinsicContentSize
+        if style == .icon || title.isEmpty { return s }
+        return NSSize(width: s.width + padding.left + padding.right, height: s.height + padding.top + padding.bottom)
+    }
+
+    /// Colore del contenuto al posto di quello dello stile (es. rosso per "Elimina").
+    var tint: NSColor? { didSet { updateAppearance() } }
+
     private var foregroundColor: NSColor {
+        if let tint = tint { return tint }
         switch style {
         case .plain, .ghost, .icon: return Theme.fg
         case .accent: return Theme.accentFg
@@ -276,8 +291,30 @@ class StyledButton: NSButton {
 }
 
 /// Campo di testo con bordo arrotondato e accento sul focus (equivalente dello stile 'Input').
+/// Cella con padding interno (stile 'Input' di Theme.cs: 8,6) e testo centrato verticalmente,
+/// anche durante la modifica (l'editor di campo usa gli stessi rettangoli).
+final class PaddedTextFieldCell: NSTextFieldCell {
+    var inset = NSSize(width: 8, height: 6)
+
+    override func drawingRect(forBounds rect: NSRect) -> NSRect {
+        let r = super.drawingRect(forBounds: rect.insetBy(dx: inset.width, dy: 0))
+        let h = cellSize(forBounds: r).height
+        return NSRect(x: r.minX, y: r.minY + max(0, (r.height - h) / 2), width: r.width, height: min(h, r.height))
+    }
+
+    override func edit(withFrame rect: NSRect, in controlView: NSView, editor textObj: NSText, delegate: Any?, event: NSEvent?) {
+        super.edit(withFrame: drawingRect(forBounds: rect), in: controlView, editor: textObj, delegate: delegate, event: event)
+    }
+
+    override func select(withFrame rect: NSRect, in controlView: NSView, editor textObj: NSText, delegate: Any?, start selStart: Int, length selLength: Int) {
+        super.select(withFrame: drawingRect(forBounds: rect), in: controlView, editor: textObj, delegate: delegate, start: selStart, length: selLength)
+    }
+}
+
 class StyledTextField: NSTextField {
     private var isFocused = false { didSet { needsDisplay = true } }
+
+    override class var cellClass: AnyClass? { get { PaddedTextFieldCell.self } set {} }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -294,6 +331,9 @@ class StyledTextField: NSTextField {
         wantsLayer = true
         layer?.cornerRadius = 4
         (cell as? NSTextFieldCell)?.usesSingleLineMode = true
+        (cell as? NSTextFieldCell)?.isScrollable = true
+        isEditable = true
+        isSelectable = true
     }
 
     override func becomeFirstResponder() -> Bool {
@@ -442,10 +482,15 @@ class SegmentedControl: NSView {
             b.tag = i
             b.isBordered = false
             b.wantsLayer = true
-            b.layer?.cornerRadius = 4
+            b.layer?.cornerRadius = 5
+            b.layer?.masksToBounds = false
             b.font = NSFont.systemFont(ofSize: 12.5)
+            b.refusesFirstResponder = true
             buttons.append(b)
             stack.addArrangedSubview(b)
+            // il segmento occupa tutta l'altezza della traccia (meno il bordo interno): con
+            // l'altezza naturale del testo l'evidenziazione risultava schiacciata
+            b.heightAnchor.constraint(equalTo: stack.heightAnchor, constant: -6).isActive = true
         }
         updateAppearance()
     }
@@ -462,7 +507,16 @@ class SegmentedControl: NSView {
     private func updateAppearance() {
         for (i, b) in buttons.enumerated() {
             let sel = i == selectedIndex
-            b.layer?.backgroundColor = (sel ? Theme.card : .clear).cgColor
+            // segmento selezionato in rilievo (bordo sottile e ombra leggera), ben distinto
+            // dalla traccia anche col tema scuro, dove Card e traccia hanno toni molto vicini
+            let selBg = Theme.isDark ? NSColor(white: 0.36, alpha: 1) : NSColor.white
+            b.layer?.backgroundColor = (sel ? selBg : .clear).cgColor
+            b.layer?.borderWidth = sel ? 0.5 : 0
+            b.layer?.borderColor = (Theme.isDark ? NSColor.white.withAlphaComponent(0.10) : NSColor.black.withAlphaComponent(0.08)).cgColor
+            b.layer?.shadowOpacity = sel ? 1 : 0
+            b.layer?.shadowColor = NSColor.black.withAlphaComponent(Theme.isDark ? 0.35 : 0.10).cgColor
+            b.layer?.shadowOffset = NSSize(width: 0, height: -1)
+            b.layer?.shadowRadius = 1.5
             let fg = sel ? Theme.fg : Theme.fg2
             b.attributedTitle = NSAttributedString(string: b.title, attributes: [
                 .foregroundColor: fg,

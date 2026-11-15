@@ -25,7 +25,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         guard !background else { return }
-        DispatchQueue.main.async { [weak self] in
+        // breve attesa: la status item riceve la sua posizione nella barra dei menu solo dopo
+        // il primo ciclo di layout, e il pannello si ancora a quella
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self = self else { return }
             self.controller.flyout.showFlyout()
             if Program.debugOn { self.controller.demo(ProcessInfo.processInfo.environment["NETSWITCH_DEMO"]) }
@@ -40,6 +42,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    /// Riapertura dal Finder/Launchpad/`open` mentre l'app è già attiva: riapre il pannello
+    /// (come rilanciare l'exe su Windows).
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        controller.flyout.showFlyout()
+        return false
+    }
 
     deinit {
         if let o = showObserver { DistributedNotificationCenter.default().removeObserver(o) }

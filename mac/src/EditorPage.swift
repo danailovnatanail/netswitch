@@ -73,9 +73,9 @@ class EditorPage: NSView {
         form.edgeInsets = NSEdgeInsets(top: 4, left: 16, bottom: 12, right: 12)
         form.widthAnchor.constraint(equalToConstant: 380).isActive = true
 
-        if kind == .apply, let app = app, !app.configs.isEmpty {
+        if kind == .apply, !app.configs.isEmpty {
             let load = UI.iconTextButton(.ghost, UI.Glyph.down, "Carica da configurazione", glyphAfter: true, nil)
-            load.contentTintColor = Theme.accent
+            load.tint = Theme.accent
             load.onClick = { [weak self] in self?.showLoadMenu(load) }
             form.addArrangedSubview(load)
             form.setCustomSpacing(10, after: load)
@@ -96,6 +96,7 @@ class EditorPage: NSView {
         staticFields.spacing = 14
         staticFields.addArrangedSubview(fullWidthField("Indirizzo IP / subnet", txtIp))
         let hint = UI.wrappingText("Subnet anche come 255.255.255.0 · più indirizzi separati da virgola", 11.5, Theme.fg3)
+        hint.preferredMaxLayoutWidth = 352
         staticFields.addArrangedSubview(hint)
         staticFields.setCustomSpacing(4, after: staticFields.arrangedSubviews[0])
         staticFields.addArrangedSubview(fullWidthField("Gateway", txtGw))
@@ -104,7 +105,7 @@ class EditorPage: NSView {
         dnsGrid.distribution = .fillEqually
         dnsGrid.spacing = 8
         dnsGrid.translatesAutoresizingMaskIntoConstraints = false
-        dnsGrid.widthAnchor.constraint(equalToConstant: 356).isActive = true
+        dnsGrid.widthAnchor.constraint(equalToConstant: 352).isActive = true
         staticFields.addArrangedSubview(dnsGrid)
         form.addArrangedSubview(staticFields)
 
@@ -117,7 +118,7 @@ class EditorPage: NSView {
             txtName.isHidden = true
             txtName.translatesAutoresizingMaskIntoConstraints = false
             txtName.heightAnchor.constraint(equalToConstant: 30).isActive = true
-            txtName.widthAnchor.constraint(equalToConstant: 356).isActive = true
+            txtName.widthAnchor.constraint(equalToConstant: 352).isActive = true
             form.addArrangedSubview(txtName)
         }
 
@@ -179,11 +180,11 @@ class EditorPage: NSView {
         return sp
     }
 
-    /// Come field(), ma occupa l'intera larghezza di una riga del form (356pt = 380 - margini).
+    /// Come field(), ma occupa l'intera larghezza di una riga del form (352pt = 380 - margini 16 + 12).
     private func fullWidthField(_ label: String, _ control: NSView) -> NSView {
         let sp = field(label, control)
         sp.translatesAutoresizingMaskIntoConstraints = false
-        sp.widthAnchor.constraint(equalToConstant: 356).isActive = true
+        sp.widthAnchor.constraint(equalToConstant: 352).isActive = true
         return sp
     }
 

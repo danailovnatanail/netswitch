@@ -65,7 +65,7 @@ class AdapterCardView: NSView {
     private let sw = UI.switchControl(nil)
     private let chevron = UI.icon(UI.Glyph.down, 10, Theme.fg3)
     private let details = NSStackView()
-    private let infoGrid = NSGridView(numberOfColumns: 2, rows: 0)
+    private var infoGrid = AdapterCardView.makeInfoGrid()
     private var btnSet: StyledButton!
     private var btnDhcp: StyledButton!
     private var btnCfg: StyledButton!
@@ -95,7 +95,7 @@ class AdapterCardView: NSView {
         // ---------------------------------------------------- intestazione
         header.translatesAutoresizingMaskIntoConstraints = false
         header.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        header.widthAnchor.constraint(equalToConstant: 380).isActive = true
+        header.widthAnchor.constraint(equalToConstant: 352).isActive = true
         header.onClick = { [weak self] in
             guard let self = self, let fly = self.fly else { return }
             fly.toggleAdapterExpanded(self.a, self)
@@ -169,13 +169,11 @@ class AdapterCardView: NSView {
         details.spacing = 10
         details.translatesAutoresizingMaskIntoConstraints = false
         details.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 12, right: 10)
-        details.widthAnchor.constraint(equalToConstant: 380).isActive = true
+        details.widthAnchor.constraint(equalToConstant: 352).isActive = true
         details.isHidden = true
         details.addArrangedSubview(UI.divider())
         details.arrangedSubviews.last?.widthAnchor.constraint(equalTo: details.widthAnchor, constant: -22).isActive = true
 
-        infoGrid.rowSpacing = 4
-        infoGrid.columnSpacing = 8
         details.addArrangedSubview(infoGrid)
 
         btnSet = UI.button(.accent, "Imposta IP", { [weak self] in
@@ -240,8 +238,12 @@ class AdapterCardView: NSView {
         } else {
             let state = a.connectionStatus == 0 ? "Non connessa" : a.statusText
             let suffix = a.addresses.isEmpty ? "" : "  ·  " + a.addresses[0] + (a.addresses.count > 1 ? " +\(a.addresses.count - 1)" : "")
-            let s = NSMutableAttributedString(string: state, attributes: [.foregroundColor: Theme.warning])
-            if !suffix.isEmpty { s.append(NSAttributedString(string: suffix, attributes: [.foregroundColor: Theme.fg2])) }
+            // l'attributed string sostituisce lo stile della label: font e troncamento vanno ripetuti
+            let para = NSMutableParagraphStyle()
+            para.lineBreakMode = .byTruncatingTail
+            let base: [NSAttributedString.Key: Any] = [.font: subLabel.font as Any, .paragraphStyle: para]
+            let s = NSMutableAttributedString(string: state, attributes: base.merging([.foregroundColor: Theme.warning]) { $1 })
+            if !suffix.isEmpty { s.append(NSAttributedString(string: suffix, attributes: base.merging([.foregroundColor: Theme.fg2]) { $1 })) }
             subLabel.attributedStringValue = s
         }
 
@@ -259,7 +261,15 @@ class AdapterCardView: NSView {
     }
 
     private func buildInfo() {
-        while infoGrid.numberOfRows > 0 { infoGrid.removeRow(at: 0) }
+        // griglia nuova a ogni aggiornamento: svuotare quella esistente con removeRow lascia
+        // le viste delle celle disegnate e la larghezza delle colonne sfasata
+        let fresh = AdapterCardView.makeInfoGrid()
+        if let i = details.arrangedSubviews.firstIndex(of: infoGrid) {
+            details.removeArrangedSubview(infoGrid)
+            infoGrid.removeFromSuperview()
+            details.insertArrangedSubview(fresh, at: i)
+        }
+        infoGrid = fresh
         let speed = a.speedText
         addInfo("Stato", a.statusText + (speed.isEmpty ? "" : "  ·  " + speed), copy: false)
         addInfo("IP", a.addresses.isEmpty ? "-" : a.addresses.joined(separator: "\n"), copy: true)
@@ -267,6 +277,13 @@ class AdapterCardView: NSView {
         addInfo("DNS", a.dns.isEmpty ? "-" : a.dns.joined(separator: "\n"), copy: true)
         addInfo("MAC", a.mac.isEmpty ? "-" : a.mac, copy: true)
         addInfo("Adattatore", a.description, copy: false)
+    }
+
+    private static func makeInfoGrid() -> NSGridView {
+        let g = NSGridView(numberOfColumns: 2, rows: 0)
+        g.rowSpacing = 4
+        g.columnSpacing = 8
+        return g
     }
 
     private func addInfo(_ label: String, _ value: String, copy: Bool) {
@@ -347,7 +364,7 @@ class ConfigCardView: NSView {
 
         header.translatesAutoresizingMaskIntoConstraints = false
         header.heightAnchor.constraint(equalToConstant: 50).isActive = true
-        header.widthAnchor.constraint(equalToConstant: 380).isActive = true
+        header.widthAnchor.constraint(equalToConstant: 352).isActive = true
         header.onClick = { [weak self] in
             guard let self = self, let fly = self.fly else { return }
             fly.toggleConfigExpanded(self.c, self)
@@ -392,7 +409,7 @@ class ConfigCardView: NSView {
         details.spacing = 10
         details.translatesAutoresizingMaskIntoConstraints = false
         details.edgeInsets = NSEdgeInsets(top: 0, left: 12, bottom: 12, right: 12)
-        details.widthAnchor.constraint(equalToConstant: 380).isActive = true
+        details.widthAnchor.constraint(equalToConstant: 352).isActive = true
         details.isHidden = true
         details.addArrangedSubview(UI.divider())
         details.arrangedSubviews.last?.widthAnchor.constraint(equalTo: details.widthAnchor, constant: -24).isActive = true
@@ -417,7 +434,7 @@ class ConfigCardView: NSView {
             guard let self = self, let app = self.app else { return }
             app.deleteConfig(self.c)
         })
-        delBtn.contentTintColor = Theme.danger
+        delBtn.tint = Theme.danger
         downBtn = UI.iconButton(UI.Glyph.down, "Sposta giù", { [weak self] in
             guard let self = self, let app = self.app else { return }
             app.moveConfig(self.c, 1)
@@ -440,10 +457,12 @@ class ConfigCardView: NSView {
         actions.orientation = .horizontal
         actions.spacing = 4
         actions.translatesAutoresizingMaskIntoConstraints = false
-        actions.widthAnchor.constraint(equalToConstant: 356).isActive = true
         details.addArrangedSubview(actions)
+        // larghezza utile della scheda (352) meno i margini interni dei dettagli
+        actions.widthAnchor.constraint(equalTo: details.widthAnchor, constant: -24).isActive = true
 
         root.addArrangedSubview(details)
+        update(c)
         setExpanded(expanded, animate: false)
     }
 

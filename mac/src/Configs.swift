@@ -51,6 +51,7 @@ enum ConfigStore {
               let data = FileManager.default.contents(atPath: path) else { return [] }
         if let list = try? parse(data) { return list }
         // file corrotto: lo conserva come backup e riparte vuoto
+        try? FileManager.default.removeItem(atPath: path + ".bak")
         try? FileManager.default.copyItem(atPath: path, toPath: path + ".bak")
         return []
     }

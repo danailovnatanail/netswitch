@@ -45,13 +45,8 @@ enum NetOps {
         return maskBits(prefix) == m ? prefix : -1
     }
 
-    /// Accetta "IP/prefisso" o "IP/subnetmask".
-    static func tryParseCidr(_ text: String) -> (ip: String, prefix: Int)? {
-        let (r, _) = tryParseCidrVerbose(text)
-        return r
-    }
-
-    static func tryParseCidrVerbose(_ text: String) -> ((ip: String, prefix: Int)?, String?) {
+    /// Accetta "IP/prefisso" o "IP/subnetmask"; in caso di errore restituisce il messaggio.
+    static func tryParseCidr(_ text: String) -> ((ip: String, prefix: Int)?, String?) {
         let t = (text).trimmingCharacters(in: .whitespaces)
         if t.isEmpty { return (nil, "Inserire l'indirizzo IP nel formato IP/subnet (es. 192.168.1.10/24).") }
         guard let slashIdx = t.firstIndex(of: "/") else {
@@ -91,7 +86,7 @@ enum NetOps {
         let parts = norm.split(whereSeparator: { $0 == "," || $0 == ";" || $0 == " " || $0 == "\t" }).map(String.init)
         if parts.isEmpty { return (nil, "Inserire l'indirizzo IP nel formato IP/subnet (es. 192.168.1.10/24).") }
         for p in parts {
-            let (r, err) = tryParseCidrVerbose(p)
+            let (r, err) = tryParseCidr(p)
             guard let r = r else { return (nil, err) }
             if list.contains(where: { $0.key == r.ip }) { return (nil, "Indirizzo ripetuto: \(r.ip).") }
             list.append((r.ip, r.prefix))
@@ -154,6 +149,46 @@ enum NetOps {
         return OpResult(p.terminationStatus == 0, msg)
     }
 
+    /// Esegue una sequenza di comandi che modificano la rete chiedendo la password al massimo
+    /// una volta. networksetup per un utente amministratore di solito funziona anche senza
+    /// privilegi elevati (nessun prompt): si prova così e, dal primo comando che fallisce (o che
+    /// richiede root, come ifconfig alias), i restanti vengono eseguiti tutti insieme in un'unica
+    /// chiamata osascript. Il primo comando è quello principale: se fallisce, gli altri non
+    /// vengono eseguiti. Restituisce un esito per ogni comando eseguito.
+    static func runAdmin(_ cmds: [[String]]) -> [OpResult] {
+        var results: [OpResult] = []
+        var i = 0
+        while i < cmds.count, cmds[i][0] == networksetup {
+            let r = runProcess(cmds[i][0], Array(cmds[i].dropFirst()))
+            if !r.ok { break }
+            results.append(r)
+            i += 1
+        }
+        if i == cmds.count { return results }
+
+        // per ogni comando: output e codice di uscita, separati da un marcatore
+        var script = ""
+        for (k, c) in cmds[i...].enumerated() {
+            script += "out=$(\(c.map(shellQuote).joined(separator: " ")) 2>&1); rc=$?; printf '%s\\n\(rcMarker)%d\\n' \"$out\" $rc; "
+            if k == 0 && i == 0 { script += "[ $rc -eq 0 ] || exit 0; " }
+        }
+        let r = runElevated("/bin/sh", ["-c", script])
+        guard r.ok else {
+            // osascript non riuscito (es. password non fornita): nessun comando eseguito
+            return results + [OpResult(false, r.message)]
+        }
+        var buf: [String] = []
+        for line in r.message.components(separatedBy: "\n") {
+            if line.hasPrefix(rcMarker) {
+                results.append(OpResult(line.dropFirst(rcMarker.count) == "0", buf.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)))
+                buf = []
+            } else { buf.append(line) }
+        }
+        return results
+    }
+
+    private static let rcMarker = "__NETSWITCH_RC__"
+
     private static func shellQuote(_ s: String) -> String {
         "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
@@ -167,8 +202,8 @@ enum NetOps {
 
     // ---------------------------------------------------------------- operazioni
 
-    static func apply(_ serviceName: String, _ deviceName: String, _ c: SavedConfig) -> OpResult {
-        if c.dhcp { return applyDhcp(serviceName) }
+    static func apply(_ a: AdapterInfo, _ c: SavedConfig) -> OpResult {
+        if c.dhcp { return applyDhcp(a) }
         let (parsedAddrs, parseErr) = tryParseCidrList(c.address)
         guard let addrs = parsedAddrs else {
             return OpResult(false, parseErr ?? "Indirizzo non valido.")
@@ -176,31 +211,47 @@ enum NetOps {
         var dns: [String] = []
         if !c.dns1.trimmingCharacters(in: .whitespaces).isEmpty { dns.append(c.dns1.trimmingCharacters(in: .whitespaces)) }
         if !c.dns2.trimmingCharacters(in: .whitespaces).isEmpty { dns.append(c.dns2.trimmingCharacters(in: .whitespaces)) }
-        return applyStatic(serviceName, deviceName, addrs, c.gateway.trimmingCharacters(in: .whitespaces), dns)
+        return applyStatic(a, addrs, c.gateway.trimmingCharacters(in: .whitespaces), dns)
     }
 
-    static func applyStatic(_ serviceName: String, _ deviceName: String, _ addrs: [(key: String, value: Int)], _ gateway: String, _ dns: [String]) -> OpResult {
-        let mask = maskFromPrefix(addrs[0].value)
-        let r = runElevated(networksetup, ["-setmanual", serviceName, addrs[0].key, mask, gateway])
-        if !r.ok {
-            return OpResult(false, "Impossibile impostare l'indirizzo IP su '\(serviceName)'.\n\n\(r.message)")
-        }
+    /// Indirizzi aggiuntivi impostati come alias con ifconfig: tutti gli IPv4 del device
+    /// diversi dall'indirizzo principale gestito da networksetup.
+    private static func aliases(of a: AdapterInfo) -> [String] {
+        a.addresses.map { $0.components(separatedBy: "/")[0] }.filter { $0 != a.primaryIP }
+    }
 
-        var warnings: [String] = []
+    /// Comandi per togliere gli alias che non fanno parte della nuova configurazione: né
+    /// networksetup -setdhcp né -setmanual li rimuovono.
+    private static func removeAliasCommands(_ a: AdapterInfo, keeping keep: [String]) -> [[String]] {
+        guard !a.device.isEmpty else { return [] }
+        return aliases(of: a).filter { !keep.contains($0) }.map { [ifconfig, a.device, "-alias", $0] }
+    }
+
+    static func applyStatic(_ a: AdapterInfo, _ addrs: [(key: String, value: Int)], _ gateway: String, _ dns: [String]) -> OpResult {
+        let serviceName = a.name, deviceName = a.device
+        let mask = maskFromPrefix(addrs[0].value)
+        var cmds: [[String]] = [[networksetup, "-setmanual", serviceName, addrs[0].key, mask, gateway]]
+        var labels = [""]
+        cmds.append([networksetup, "-setdnsservers", serviceName] + (dns.isEmpty ? ["Empty"] : dns))
+        labels.append(dns.isEmpty ? "Rimozione DNS" : "DNS")
+        for r in removeAliasCommands(a, keeping: addrs.map { $0.key }) {
+            cmds.append(r)
+            labels.append("Rimozione indirizzo \(r[3])")
+        }
         // networksetup non supporta più indirizzi sulla stessa interfaccia: gli indirizzi
         // aggiuntivi vengono aggiunti come alias (non persistono dopo un riavvio).
         for i in 1..<addrs.count {
-            let a = runElevated(ifconfig, [deviceName, "alias", addrs[i].key, "netmask", maskFromPrefix(addrs[i].value)])
-            if !a.ok { warnings.append("Indirizzo \(addrs[i].key)/\(addrs[i].value): \(a.message)") }
+            cmds.append([ifconfig, deviceName, "alias", addrs[i].key, "netmask", maskFromPrefix(addrs[i].value)])
+            labels.append("Indirizzo \(addrs[i].key)/\(addrs[i].value)")
         }
-
-        let d: OpResult
-        if dns.isEmpty {
-            d = runElevated(networksetup, ["-setdnsservers", serviceName, "Empty"])
-            if !d.ok { warnings.append("Rimozione DNS: \(d.message)") }
-        } else {
-            d = runElevated(networksetup, ["-setdnsservers", serviceName] + dns)
-            if !d.ok { warnings.append("DNS: \(d.message)") }
+        let res = runAdmin(cmds)
+        if res.isEmpty || !res[0].ok {
+            return OpResult(false, "Impossibile impostare l'indirizzo IP su '\(serviceName)'.\n\n\(res.first?.message ?? "")")
+        }
+        var warnings: [String] = []
+        for k in 1..<cmds.count {
+            if k >= res.count { warnings.append("\(labels[k]): non eseguito. \(res.last?.message ?? "")"); continue }
+            if !res[k].ok { warnings.append("\(labels[k]): \(res[k].message)") }
         }
 
         var msg = "\(serviceName): \(formatCidrList(addrs))"
@@ -212,18 +263,21 @@ enum NetOps {
         return OpResult(true, msg)
     }
 
-    static func applyDhcp(_ serviceName: String) -> OpResult {
-        let r = runElevated(networksetup, ["-setdhcp", serviceName])
-        if !r.ok {
-            return OpResult(false, "Impossibile attivare il DHCP su '\(serviceName)'.\n\n\(r.message)")
+    static func applyDhcp(_ a: AdapterInfo) -> OpResult {
+        let serviceName = a.name
+        let res = runAdmin([[networksetup, "-setdhcp", serviceName], [networksetup, "-setdnsservers", serviceName, "Empty"]]
+                           + removeAliasCommands(a, keeping: []))
+        if res.isEmpty || !res[0].ok {
+            return OpResult(false, "Impossibile attivare il DHCP su '\(serviceName)'.\n\n\(res.first?.message ?? "")")
         }
-        let d = runElevated(networksetup, ["-setdnsservers", serviceName, "Empty"])
-        let note = d.ok ? "" : " (DNS: \(d.message))"
+        let d = res.count > 1 ? res[1] : OpResult(false, "non eseguito")
+        var note = d.ok ? "" : " (DNS: \(d.message))"
+        if res.dropFirst(2).contains(where: { !$0.ok }) { note += " (alcuni indirizzi aggiuntivi non sono stati rimossi)" }
         return OpResult(true, "\(serviceName): indirizzo e DNS automatici (DHCP)\(note)")
     }
 
     static func setEnabled(_ serviceName: String, _ enable: Bool) -> OpResult {
-        let r = runElevated(networksetup, ["-setnetworkserviceenabled", serviceName, enable ? "on" : "off"])
+        let r = runAdmin([[networksetup, "-setnetworkserviceenabled", serviceName, enable ? "on" : "off"]]).first ?? OpResult(false, "")
         if r.ok { return OpResult(true, "\(serviceName) \(enable ? "attivata" : "disattivata")") }
         return OpResult(false, "Operazione non riuscita su '\(serviceName)'.\n\n\(r.message)")
     }

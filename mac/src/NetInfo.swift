@@ -17,9 +17,13 @@ final class AdapterInfo {
     var addresses: [String] = []
     var gateways: [String] = []
     var dns: [String] = []
+    /// Indirizzo principale del servizio secondo networksetup -getinfo (statico o da DHCP);
+    /// gli altri IPv4 presenti sul device sono alias aggiunti con ifconfig.
+    var primaryIP: String = ""
 
-    /// Identificativo stabile dell'interfaccia (equivalente al GUID su Windows).
-    var key: String { device.isEmpty ? name : device }
+    /// Identificativo stabile dell'interfaccia (equivalente al GUID su Windows): il nome del
+    /// servizio, perché più servizi possono condividere lo stesso device (es. en5).
+    var key: String { name }
 
     var description: String {
         hardwarePort.isEmpty ? name : (device.isEmpty ? hardwarePort : "\(hardwarePort) (\(device))")
@@ -62,8 +66,10 @@ enum NetInfo {
         let hwPorts = parseHardwarePorts()                 // device -> (hardwarePort, mac)
         let order = parseServiceOrder()                    // [(service, hardwarePort, device)]
         let enabledSet = parseEnabledServices()             // service -> enabled
+        let vpnStatus = parseVpnStatus()                    // service -> connesso
 
         var list: [AdapterInfo] = []
+        var usedDevices = Set<String>()
         for entry in order {
             let a = AdapterInfo()
             a.name = entry.service
@@ -72,7 +78,20 @@ enum NetInfo {
             a.adminEnabled = enabledSet[entry.service] ?? true
             if let hw = hwPorts[entry.device] { a.mac = hw.mac }
             fillFromGetInfo(a)
-            if !a.device.isEmpty { fillFromIfconfig(a) }
+            if let connected = vpnStatus[entry.service] {
+                // servizio VPN (nessun device): lo stato viene da scutil --nc
+                a.connectionStatus = connected ? 2 : 0
+            } else if !a.device.isEmpty {
+                if usedDevices.contains(a.device) {
+                    // più servizi sullo stesso device: macOS attiva solo il primo abilitato
+                    // nell'ordine dei servizi, gli altri restano inattivi
+                    a.present = NetOps.runProcess(NetOps.ifconfig, [a.device]).ok
+                    a.connectionStatus = 0
+                } else {
+                    fillFromIfconfig(a)
+                    if a.adminEnabled { usedDevices.insert(a.device) }
+                }
+            }
             list.append(a)
         }
 
@@ -162,6 +181,21 @@ enum NetInfo {
         return result
     }
 
+    // ---------------------------------------------------------------- scutil --nc list
+
+    private static func parseVpnStatus() -> [String: Bool] {
+        // es: '* (Disconnected)   84D6...  VPN (com.wireguard.macos) "Nome"   [VPN:...]'
+        let r = NetOps.runProcess("/usr/sbin/scutil", ["--nc", "list"])
+        var result: [String: Bool] = [:]
+        for line in r.message.components(separatedBy: "\n") {
+            guard let open = line.firstIndex(of: "("), let close = line[open...].firstIndex(of: ")"),
+                  let q1 = line.firstIndex(of: "\""), let q2 = line[line.index(after: q1)...].firstIndex(of: "\"") else { continue }
+            let state = line[line.index(after: open)..<close]
+            result[String(line[line.index(after: q1)..<q2])] = (state == "Connected")
+        }
+        return result
+    }
+
     // ---------------------------------------------------------------- networksetup -getinfo <service>
 
     private static func fillFromGetInfo(_ a: AdapterInfo) {
@@ -176,19 +210,31 @@ enum NetInfo {
             else if line.hasPrefix("Subnet mask:") { mask = value(of: line) }
             else if line.hasPrefix("Router:") { router = value(of: line) }
         }
-        if let ip = ip, !ip.isEmpty, ip != "none" {
+        if let ip = ip, NetOps.isValidIPv4(ip) {
+            a.primaryIP = ip
             let prefix = mask.flatMap { NetOps.prefixFromMask($0) >= 0 ? NetOps.prefixFromMask($0) : nil } ?? 24
             if !a.addresses.contains(where: { $0.hasPrefix(ip + "/") }) {
                 a.addresses.append("\(ip)/\(prefix)")
             }
         }
-        if let router = router, !router.isEmpty, router != "none" { a.gateways.append(router) }
+        if let router = router, NetOps.isValidIPv4(router) { a.gateways.append(router) }
 
         let d = NetOps.runProcess(NetOps.networksetup, ["-getdnsservers", a.name])
         if !d.message.lowercased().contains("there aren't any dns servers") {
             for line in d.message.components(separatedBy: "\n") {
                 let s = line.trimmingCharacters(in: .whitespaces)
                 if NetOps.isValidIPv4(s), !a.dns.contains(s) { a.dns.append(s) }
+            }
+        }
+        if a.dns.isEmpty && a.dhcp && !a.device.isEmpty {
+            // nessun DNS manuale: quelli ottenuti dal DHCP (come DnsAddresses su Windows)
+            let p = NetOps.runProcess("/usr/sbin/ipconfig", ["getpacket", a.device])
+            for line in p.message.components(separatedBy: "\n") where line.hasPrefix("domain_name_server") {
+                guard let o = line.firstIndex(of: "{"), let c = line.firstIndex(of: "}"), o < c else { continue }
+                for d in line[line.index(after: o)..<c].components(separatedBy: ",") {
+                    let s = d.trimmingCharacters(in: .whitespaces)
+                    if NetOps.isValidIPv4(s), !a.dns.contains(s) { a.dns.append(s) }
+                }
             }
         }
     }

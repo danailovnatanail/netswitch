@@ -134,6 +134,9 @@ class Flyout: NSWindow, NSMenuDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         makeKeyAndOrderFront(nil)
+        // nessun controllo col focus all'apertura: altrimenti AppKit lo dà al primo pulsante
+        // (Aggiorna) e ne disegna l'anello azzurro; Esc arriva comunque alla finestra
+        if !(firstResponder is NSTextView) { makeFirstResponder(nil) }
         startAutoRefresh()
         appRef?.refresh()
     }
@@ -163,8 +166,15 @@ class Flyout: NSWindow, NSMenuDelegate {
     }
 
     private func positionNearTray() {
-        let gap: CGFloat = 10
-        let anchor = anchorProvider?() ?? defaultAnchor()
+        let gap: CGFloat = 6
+        // L'icona nella barra dei menu può non avere ancora una posizione valida (subito
+        // dopo l'avvio) o essere nascosta (es. dietro il notch): in quel caso il pannello
+        // va comunque in alto a destra, vicino all'orologio.
+        var anchor = defaultAnchor()
+        if let a = anchorProvider?(), let sc = NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: a.midX, y: a.midY)) }),
+           a.minY >= sc.visibleFrame.maxY - 1 {
+            anchor = a
+        }
         let screen = NSScreen.screens.first { $0.frame.contains(NSPoint(x: anchor.midX, y: anchor.midY)) } ?? NSScreen.main ?? NSScreen.screens[0]
         let vis = screen.visibleFrame
         let panelH = min(620, vis.height - 2 * gap)
@@ -174,12 +184,16 @@ class Flyout: NSWindow, NSMenuDelegate {
         let topY = min(anchor.minY, vis.maxY) - gap
         let y = max(vis.minY + gap, topY - frame.height)
         frame.origin = NSPoint(x: x, y: y)
+        Program.debug("posizione: anchor=\(NSStringFromRect(anchor)) (raw \(anchorProvider?().map { NSStringFromRect($0) } ?? "nil")) screen=\(NSStringFromRect(screen.frame)) vis=\(NSStringFromRect(vis)) frame=\(NSStringFromRect(frame))")
         setFrame(frame, display: true)
     }
 
     private func defaultAnchor() -> NSRect {
-        let screen = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        return NSRect(x: screen.maxX - 40, y: screen.maxY - 24, width: 24, height: 24)
+        // schermo con la barra dei menu (il primo), area dell'orologio
+        let screen = NSScreen.screens.first ?? NSScreen.main
+        let f = screen?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let menuBarH = screen.map { $0.frame.maxY - $0.visibleFrame.maxY } ?? 24
+        return NSRect(x: f.maxX - 40, y: f.maxY - menuBarH, width: 24, height: menuBarH)
     }
 
     /// Solo diagnostica: salva il pannello come PNG.
@@ -510,6 +524,12 @@ class Flyout: NSWindow, NSMenuDelegate {
         let exp = !expandedConfigs.contains(c.name)
         if exp { expandedConfigs.insert(c.name) } else { expandedConfigs.remove(c.name) }
         card.setExpanded(exp, animate: true)
+    }
+
+    func demoExpandConfig() {
+        if let card = cfgList.arrangedSubviews.compactMap({ $0 as? ConfigCardView }).first, let c = appRef?.configs.first {
+            toggleConfigExpanded(c, card)
+        }
     }
 
     // ================================================================== conferme

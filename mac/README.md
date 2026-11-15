@@ -4,8 +4,7 @@ Porting della versione Windows per macOS: pannello compatto in stile "flyout" pe
 interfacce di rete, ancorato all'icona di NetSwitch nella barra dei menu. Per il momento
 supporta solo Mac con processore Apple Silicon (arm64).
 
-> Questa versione non è stata ancora compilata né testata su un Mac reale: è stata scritta
-> in un ambiente Linux senza accesso a macOS. Vedi "Stato e limiti noti" più sotto.
+> Compilata e provata su un Mac Apple Silicon reale. Vedi "Limiti noti" più sotto.
 
 ## Uso
 - **Clic sinistro sull'icona** → apre/chiude il pannello (si chiude anche cliccando altrove o
@@ -14,8 +13,8 @@ supporta solo Mac con processore Apple Silicon (arm64).
   automatico, esci.
 - Rilanciare l'app mentre è già attiva riapre il pannello.
 
-Il pannello segue il tema chiaro/scuro e il colore d'accento di macOS e si posiziona appena
-sotto l'icona nella barra dei menu (che su macOS è sempre in alto, a differenza della taskbar
+Il pannello segue il tema chiaro/scuro (anche quando cambia con il pannello aperto) e il colore
+d'accento di macOS e si posiziona appena sotto l'icona nella barra dei menu (che su macOS è sempre in alto, a differenza della taskbar
 di Windows che può stare sopra o sotto).
 
 ## Funzioni
@@ -35,16 +34,16 @@ Le stesse della versione Windows:
   macOS dell'attività pianificata di Windows.
 
 ## Differenza principale rispetto a Windows: privilegi amministrativi
-Windows chiede i privilegi di amministratore una sola volta all'avvio (UAC) e poi esegue tutte
-le operazioni di rete senza altri prompt. Su macOS non esiste un equivalente diretto senza
-un helper privilegiato firmato con certificato Apple Developer (infrastruttura non disponibile
-in questo contesto di sviluppo). Questa versione quindi:
-- Esegue **ogni singola operazione** che modifica la rete (IP statico, DHCP, attiva/disattiva
-  interfaccia) tramite `osascript ... with administrator privileges`, che mostra il prompt
-  nativo della password di amministratore di macOS — l'equivalente concettuale di UAC, ma per
-  singola operazione invece che una volta sola all'avvio. macOS spesso non richiede la
-  password più volte a distanza di pochi minuti.
-- Le letture (stato delle interfacce, IP, DNS) **non richiedono** privilegi elevati.
+Windows chiede i privilegi di amministratore una sola volta all'avvio (UAC). Su macOS non
+esiste un equivalente senza un helper privilegiato firmato con certificato Apple Developer,
+quindi:
+- `networksetup` (IP statico, DHCP, DNS, attiva/disattiva) viene eseguito prima **senza
+  privilegi**: per un utente amministratore macOS lo consente, e non compare nessun prompt.
+- Solo se un comando lo richiede (sempre per `ifconfig alias`, cioè gli indirizzi aggiuntivi
+  oltre al primo), i comandi rimasti di quell'operazione vengono eseguiti tutti insieme con
+  `osascript ... with administrator privileges`: al massimo **una** richiesta di password per
+  operazione.
+- Le letture (stato delle interfacce, IP, DNS) non richiedono privilegi.
 
 ## Compilazione
 Serve solo Xcode oppure gli Strumenti da riga di comando di Xcode (per `swiftc`):
@@ -60,33 +59,21 @@ Diagnostica: con `NETSWITCH_DEBUG=1` viene scritto `$TMPDIR/netswitch_debug.log`
 convenzione della versione Windows: `NETSWITCH_FAKE=1`, `NETSWITCH_DEMO=...`,
 `NETSWITCH_SNAP=file.png`, `NETSWITCH_THEME=dark|light`, `NETSWITCH_NOHIDE=1`).
 
-## Stato e limiti noti (rispetto alla fedeltà all'originale Windows)
-Elenco onesto delle semplificazioni introdotte per i vincoli di questo ambiente di sviluppo
-(nessun Mac disponibile per compilare/testare) e per le differenze intrinseche tra le due
-piattaforme:
-
-- **Non compilato/testato**: il codice è stato scritto con attenzione ma non verificato con un
-  compilatore Swift reale né eseguito su macOS. Vanno previsti aggiustamenti in fase di prima
-  compilazione.
-- **Indirizzi IP multipli per interfaccia**: Windows li persiste tramite `netsh ... add
-  address`. Su macOS, `networksetup` non supporta più indirizzi sulla stessa interfaccia:
-  l'indirizzo principale viene impostato con `networksetup -setmanual` (persistente), gli
-  indirizzi aggiuntivi con `ifconfig ... alias` (**non persistono dopo un riavvio**).
-- **Velocità del Wi-Fi**: non mostrata (su Windows disponibile via NDIS; su macOS richiederebbe
-  API private o strumenti deprecati).
-- **Cambio tema a caldo**: le schede delle interfacce/configurazioni si aggiornano al
-  ricalcolo periodico (ogni 5 secondi col pannello aperto); gli elementi fissi del pannello
-  (sfondo, pulsanti, intestazione) si aggiornano la volta successiva che il pannello viene
-  aperto, non istantaneamente come su Windows (che usa `DynamicResource` di WPF).
-  Attualmente **non testato**.
-- **Animazioni**: semplificate a semplici dissolvenze (fade), invece delle dissolvenze +
-  scorrimento della versione WPF, per maggiore affidabilità con AppKit senza possibilità di
-  verifica visiva diretta in questo ambiente.
-- **Notifiche di sistema**: usa l'API storica `NSUserNotification` (deprecata da Apple a
-  favore di `UserNotifications`, che richiede però firma/autorizzazioni non disponibili qui).
-- **"Nascondi quando perde il focus"**: il pannello si chiude quando la finestra perde lo stato
-  di finestra chiave (`resignKey`), equivalente a `Deactivated` in WPF. Da verificare che
-  l'apertura di un sottomenu (es. "Applica configurazione") non chiuda il pannello per errore.
+## Limiti noti
+- **Indirizzi IP multipli per interfaccia**: `networksetup` gestisce un solo indirizzo per
+  servizio. Il principale viene impostato con `networksetup -setmanual` (persistente), gli
+  aggiuntivi con `ifconfig ... alias`, che **non persistono dopo un riavvio** e richiedono la
+  password di amministratore. Passando a DHCP o a un altro IP vengono rimossi.
+- **Servizi e interfacce**: su macOS ogni voce è un "servizio di rete"; più servizi possono
+  usare la stessa interfaccia fisica (es. `en5`) e macOS attiva solo il primo abilitato
+  nell'ordine dei servizi: gli altri vengono mostrati come non connessi.
+- **VPN**: lo stato connessa/non connessa viene letto con `scutil --nc`; le VPN non hanno un
+  indirizzo configurabile da NetSwitch.
+- **Velocità del Wi-Fi**: non mostrata (richiederebbe API private o strumenti deprecati).
+- **Avvio automatico**: il LaunchAgent viene letto da macOS al prossimo accesso; punta al
+  percorso attuale dell'app, quindi va riattivato se `NetSwitch.app` viene spostata.
+- **Notifiche**: al primo esito mostrato a pannello chiuso macOS chiede il permesso.
+- **Firma**: l'app è firmata ad-hoc, non notarizzata.
 
 ## Esclusione di responsabilità
 NetSwitch è fornito "così com'è", senza garanzie di alcun tipo. Modifica la configurazione di

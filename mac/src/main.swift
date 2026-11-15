@@ -55,7 +55,7 @@ func runDump(to path: String) {
     lines.append("== Test parsing IP/subnet")
     for t in ["192.168.1.10/24", "10.0.0.5/255.255.0.0", "10.0.0.5/255.0.255.0", "192.168.1.10",
               "300.1.1.1/24", "1.2.3/24", "172.16.5.4/33", " 192.168.100.1 / 30 "] {
-        let (r, err) = NetOps.tryParseCidrVerbose(t)
+        let (r, err) = NetOps.tryParseCidr(t)
         if let r = r { lines.append("   '\(t)' -> \(r.ip)/\(r.prefix) mask \(NetOps.maskFromPrefix(r.prefix))") }
         else { lines.append("   '\(t)' -> ERR: \(err ?? "")") }
     }

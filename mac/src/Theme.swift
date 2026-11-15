@@ -23,21 +23,22 @@ enum Theme {
 
     static var accentFg: NSColor { isDark ? .black : .white }
 
-    static var bg: NSColor { isDark ? hex("#202020") : hex("#F3F3F3") }
-    static var card: NSColor { isDark ? hex("#2B2B2B") : hex("#FBFBFB") }
-    static var cardHover: NSColor { isDark ? hex("#323232") : hex("#F5F5F5") }
-    static var cardBorder: NSColor { isDark ? hex("#3A3A3A") : hex("#E3E3E3") }
+    // tema scuro: grigi scuri (in stile macOS) invece del quasi-nero di Windows 11
+    static var bg: NSColor { isDark ? hex("#2E2E30") : hex("#F3F3F3") }
+    static var card: NSColor { isDark ? hex("#3A3A3C") : hex("#FBFBFB") }
+    static var cardHover: NSColor { isDark ? hex("#424244") : hex("#F5F5F5") }
+    static var cardBorder: NSColor { isDark ? hex("#48484A") : hex("#E3E3E3") }
     static var cardOff: NSColor { isDark ? NSColor.white.withAlphaComponent(0.04) : NSColor.black.withAlphaComponent(0.02) }
-    static var menuBg: NSColor { isDark ? hex("#2C2C2C") : hex("#F9F9F9") }
+    static var menuBg: NSColor { isDark ? hex("#38383A") : hex("#F9F9F9") }
     static var fg: NSColor { isDark ? hex("#FFFFFF") : hex("#1B1B1B") }
     static var fg2: NSColor { isDark ? hex("#C5C5C5") : hex("#5D5D5D") }
     static var fg3: NSColor { isDark ? hex("#8B8B8B") : hex("#8E8E8E") }
     static var subtle: NSColor { isDark ? NSColor.white.withAlphaComponent(0.06) : NSColor.black.withAlphaComponent(0.04) }
     static var subtleHover: NSColor { isDark ? NSColor.white.withAlphaComponent(0.10) : NSColor.black.withAlphaComponent(0.08) }
     static var hoverOverlay: NSColor { isDark ? NSColor.white.withAlphaComponent(0.08) : NSColor.black.withAlphaComponent(0.05) }
-    static var inputBg: NSColor { isDark ? hex("#2D2D2D") : hex("#FFFFFF") }
-    static var inputBorder: NSColor { isDark ? hex("#454545") : hex("#D1D1D1") }
-    static var divider: NSColor { isDark ? hex("#383838") : hex("#E5E5E5") }
+    static var inputBg: NSColor { isDark ? hex("#3A3A3C") : hex("#FFFFFF") }
+    static var inputBorder: NSColor { isDark ? hex("#545456") : hex("#D1D1D1") }
+    static var divider: NSColor { isDark ? hex("#48484A") : hex("#E5E5E5") }
     static var overlay: NSColor { isDark ? NSColor.black.withAlphaComponent(0.60) : NSColor.black.withAlphaComponent(0.40) }
     static var danger: NSColor { isDark ? hex("#FF99A4") : hex("#C42B1C") }
     static var dangerFill: NSColor { hex("#C42B1C") }

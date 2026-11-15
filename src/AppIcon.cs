@@ -8,7 +8,7 @@ namespace NetSwitch
     public static class AppIcon
     {
         static Icon app;
-        static Bitmap green, gray, red;
+        static Bitmap connectedDot, disconnectedDot, disabledDot;
 
         public static Icon App
         {
@@ -20,9 +20,9 @@ namespace NetSwitch
             }
         }
 
-        public static Bitmap DotConnected { get { return green ?? (green = Dot(Color.FromArgb(46, 160, 67))); } }
-        public static Bitmap DotDisconnected { get { return gray ?? (gray = Dot(Color.FromArgb(232, 162, 0))); } }
-        public static Bitmap DotDisabled { get { return red ?? (red = Ring(Color.FromArgb(142, 142, 142))); } }
+        public static Bitmap DotConnected { get { return connectedDot ?? (connectedDot = Dot(Color.FromArgb(46, 160, 67))); } }
+        public static Bitmap DotDisconnected { get { return disconnectedDot ?? (disconnectedDot = Dot(Color.FromArgb(232, 162, 0))); } }
+        public static Bitmap DotDisabled { get { return disabledDot ?? (disabledDot = Ring(Color.FromArgb(142, 142, 142))); } }
 
         static Bitmap Ring(Color c)
         {

@@ -1,4 +1,5 @@
 import AppKit
+import UserNotifications
 
 /// Controller: icona nella status bar, dati, operazioni sulle interfacce e configurazioni.
 /// Porting di Controller.cs. Il click sinistro sull'icona apre/chiude il flyout, il click
@@ -13,6 +14,7 @@ class Controller: NSObject {
     private(set) var startupEnabled = false
     private var refreshing = false
     private var pendingRefresh = false
+    private var lastIconClick: (point: NSPoint, time: Date)?
 
     override init() {
         super.init()
@@ -28,12 +30,7 @@ class Controller: NSObject {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
-        flyout = Flyout(app: self)
-        flyout.anchorProvider = { [weak self] in
-            guard let button = self?.statusItem.button, let window = button.window else { return nil }
-            let rectInWindow = button.convert(button.bounds, to: nil)
-            return window.convertToScreen(rectInWindow)
-        }
+        makeFlyout()
 
         startupEnabled = Startup.isEnabled()
         updateTrayTooltip()
@@ -43,16 +40,48 @@ class Controller: NSObject {
                                                              name: NSNotification.Name("AppleInterfaceThemeChangedNotification"), object: nil)
     }
 
+    private func makeFlyout() {
+        flyout = Flyout(app: self)
+        flyout.anchorProvider = { [weak self] in
+            guard let self = self else { return nil }
+            if let button = self.statusItem.button, let window = button.window {
+                let r = window.convertToScreen(button.convert(button.bounds, to: nil))
+                // valida solo se sta davvero nella barra dei menu di uno schermo
+                if NSScreen.screens.contains(where: { $0.frame.contains(NSPoint(x: r.midX, y: r.midY)) && r.minY >= $0.visibleFrame.maxY - 1 }) { return r }
+            }
+            // Su alcune versioni di macOS la finestra della status item non riporta la
+            // posizione reale nella barra dei menu: si usa il punto del clic sull'icona.
+            if let click = self.lastIconClick, Date().timeIntervalSince(click.time) < 2,
+               let sc = NSScreen.screens.first(where: { $0.frame.contains(click.point) }) {
+                let barBottom = sc.visibleFrame.maxY
+                return NSRect(x: click.point.x - 11, y: barBottom, width: 22, height: sc.frame.maxY - barBottom)
+            }
+            return nil
+        }
+    }
+
     @objc private func onWake() { refresh() }
 
     @objc private func onAppearanceChanged() {
-        // Il tema viene riletto a ogni aggiornamento delle schede; lo sfondo del pannello
-        // e i controlli fissi si allineano completamente alla prossima apertura del flyout.
-        Theme.apply()
+        // I colori dei controlli AppKit vengono assegnati alla creazione (non ci sono
+        // DynamicResource come in WPF): al cambio di tema il pannello viene ricreato e, se era
+        // aperto, riaperto. Breve attesa: la notifica arriva prima che effectiveAppearance
+        // dell'app sia aggiornata.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            guard let self = self else { return }
+            let wasDark = Theme.isDark
+            Theme.apply()
+            guard Theme.isDark != wasDark else { return }
+            let wasVisible = self.flyout.isVisible
+            self.flyout.forceClose()
+            self.makeFlyout()
+            if wasVisible { self.flyout.showFlyout() }
+        }
     }
 
     @objc private func statusItemClicked(_ sender: Any?) {
         guard let event = NSApp.currentEvent else { return }
+        lastIconClick = (NSEvent.mouseLocation, Date())
         if event.type == .rightMouseUp { showTrayMenu() }
         else { flyout.toggle() }
     }
@@ -94,12 +123,12 @@ class Controller: NSObject {
     // ================================================================== operazioni di rete
 
     func useDhcp(_ a: AdapterInfo) {
-        runOp("DHCP su \(a.name)") { NetOps.applyDhcp(a.name) }
+        runOp("DHCP su \(a.name)") { NetOps.applyDhcp(a) }
     }
 
     func applyConfig(_ a: AdapterInfo, _ c: SavedConfig) {
         let copy = c.clone()
-        runOp("«\(c.name)» su \(a.name)") { NetOps.apply(a.name, a.device, copy) }
+        runOp("«\(c.name)» su \(a.name)") { NetOps.apply(a, copy) }
     }
 
     func setEnabled(_ a: AdapterInfo, _ enable: Bool) {
@@ -121,7 +150,7 @@ class Controller: NSObject {
             configs.append(c.clone())
             saveConfigs()
         }
-        runOp("Imposta IP su \(a.name)") { NetOps.apply(a.name, a.device, c) }
+        runOp("Imposta IP su \(a.name)") { NetOps.apply(a, c) }
     }
 
     private func runOp(_ title: String, _ op: @escaping () -> OpResult) {
@@ -149,11 +178,19 @@ class Controller: NSObject {
         }
     }
 
+    /// Notifica di sistema (equivalente del balloon tip di Windows). Al primo uso macOS chiede
+    /// il permesso; se negato, la notifica viene semplicemente ignorata.
     private func notify(title: String, body: String) {
-        let n = NSUserNotification()
-        n.title = title
-        n.informativeText = body
-        NSUserNotificationCenter.default.deliver(n)
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            Program.debug("notifiche: permesso \(granted) \(error.map { "\($0)" } ?? "")")
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+        }
     }
 
     func toggleStartup() {
@@ -320,6 +357,7 @@ class Controller: NSObject {
         case "expand": flyout.demoExpand(a)
         case "editor": flyout.openApplyEditor(a)
         case "configs": flyout.showFlyout(1)
+        case "configs-expand": flyout.showFlyout(1); flyout.demoExpandConfig()
         case "confirm": setEnabled(a, false)
         case "error": flyout.showResult(false, "Imposta IP su Ethernet non riuscita.\n\nL'oggetto esiste già.")
         default: break
@@ -336,5 +374,20 @@ class Controller: NSObject {
         flyout.forceClose()
         NSStatusBar.system.removeStatusItem(statusItem)
         NSApp.terminate(nil)
+    }
+}
+
+extension Controller: UNUserNotificationCenterDelegate {
+    /// Mostra la notifica anche quando NetSwitch è l'app attiva.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+
+    /// Clic sulla notifica: apre il pannello (come BalloonTipClicked su Windows).
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        DispatchQueue.main.async { self.flyout.showFlyout() }
+        completionHandler()
     }
 }
